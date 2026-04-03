@@ -1,22 +1,43 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Shine - Harvard International Students App API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: users
+    description: User profiles and onboarding
+  - name: rooms
+    description: Safe Rooms - topic-based discussion spaces
+  - name: posts
+    description: Posts and discussions within Safe Rooms
+  - name: replies
+    description: Replies to posts
+  - name: resources
+    description: Curated guide resources
+  - name: circles
+    description: Buddy circles for peer connection
+  - name: missions
+    description: Scavenger hunt missions
+  - name: teams
+    description: Teams for the scavenger hunt
+  - name: submissions
+    description: Mission submissions
+  - name: badges
+    description: Achievement badges
+  - name: stats
+    description: Summary statistics and wow endpoints
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +45,664 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ─── Users ────────────────────────────────────────────────────────────────
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Not found
+    put:
+      operationId: updateMe
+      tags: [users]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/onboard:
+    post:
+      operationId: onboardUser
+      tags: [users]
+      summary: Complete onboarding for a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OnboardUserBody"
+      responses:
+        "201":
+          description: User created/onboarded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/me/prep-path:
+    get:
+      operationId: getMePrepPath
+      tags: [users]
+      summary: Get personalized prep path checklist and milestones
+      responses:
+        "200":
+          description: Personalized prep path
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrepPath"
+
+  /users/me/badges:
+    get:
+      operationId: getMeBadges
+      tags: [users]
+      summary: Get badges earned by current user
+      responses:
+        "200":
+          description: List of user badges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserBadge"
+
+  # ─── Safe Rooms ───────────────────────────────────────────────────────────
+  /rooms:
+    get:
+      operationId: listRooms
+      tags: [rooms]
+      summary: List all safe rooms
+      responses:
+        "200":
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+
+  /rooms/{id}:
+    get:
+      operationId: getRoom
+      tags: [rooms]
+      summary: Get a specific safe room
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Room detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+        "404":
+          description: Not found
+
+  /rooms/{id}/trending:
+    get:
+      operationId: getRoomTrending
+      tags: [rooms]
+      summary: Get trending posts in a room
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Trending posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+
+  # ─── Posts ────────────────────────────────────────────────────────────────
+  /rooms/{roomId}/posts:
+    get:
+      operationId: listRoomPosts
+      tags: [posts]
+      summary: List posts in a safe room
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: tag
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Post"
+    post:
+      operationId: createPost
+      tags: [posts]
+      summary: Create a post in a safe room
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePostBody"
+      responses:
+        "201":
+          description: Post created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+
+  /posts/{id}:
+    get:
+      operationId: getPost
+      tags: [posts]
+      summary: Get a post by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Post detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+        "404":
+          description: Not found
+    delete:
+      operationId: deletePost
+      tags: [posts]
+      summary: Delete a post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /posts/{id}/react:
+    post:
+      operationId: reactToPost
+      tags: [posts]
+      summary: Like or react to a post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reaction recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+
+  # ─── Replies ──────────────────────────────────────────────────────────────
+  /posts/{postId}/replies:
+    get:
+      operationId: listPostReplies
+      tags: [replies]
+      summary: List replies for a post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Replies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reply"
+    post:
+      operationId: createReply
+      tags: [replies]
+      summary: Add a reply to a post
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReplyBody"
+      responses:
+        "201":
+          description: Reply created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reply"
+
+  /replies/{id}/verify:
+    post:
+      operationId: verifyReply
+      tags: [replies]
+      summary: Mark a reply as verified (mentor/admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reply verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reply"
+
+  # ─── Resources ────────────────────────────────────────────────────────────
+  /resources:
+    get:
+      operationId: listResources
+      tags: [resources]
+      summary: List curated resource guides
+      parameters:
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Resources
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Resource"
+
+  /resources/{id}:
+    get:
+      operationId: getResource
+      tags: [resources]
+      summary: Get a resource guide
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Resource
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Resource"
+        "404":
+          description: Not found
+
+  # ─── Buddy Circles ────────────────────────────────────────────────────────
+  /circles:
+    get:
+      operationId: listCircles
+      tags: [circles]
+      summary: List available buddy circles
+      responses:
+        "200":
+          description: Circles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Circle"
+
+  /circles/me:
+    get:
+      operationId: getMyCircle
+      tags: [circles]
+      summary: Get the current user's buddy circle
+      responses:
+        "200":
+          description: My circle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Circle"
+        "404":
+          description: No circle found
+    post:
+      operationId: joinCircle
+      tags: [circles]
+      summary: Join or create a buddy circle
+      responses:
+        "200":
+          description: Joined circle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Circle"
+
+  /circles/{id}/prompt:
+    post:
+      operationId: respondToCirclePrompt
+      tags: [circles]
+      summary: Respond to a circle icebreaker prompt
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CirclePromptResponseBody"
+      responses:
+        "200":
+          description: Response recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CirclePromptResponse"
+
+  # ─── Missions ─────────────────────────────────────────────────────────────
+  /missions:
+    get:
+      operationId: listMissions
+      tags: [missions]
+      summary: List all scavenger hunt missions
+      parameters:
+        - name: type
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Missions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Mission"
+
+  /missions/{id}:
+    get:
+      operationId: getMission
+      tags: [missions]
+      summary: Get a mission by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Mission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mission"
+        "404":
+          description: Not found
+
+  /missions/{id}/submit:
+    post:
+      operationId: submitMission
+      tags: [missions]
+      summary: Submit a completed mission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitMissionBody"
+      responses:
+        "201":
+          description: Submission recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Submission"
+
+  # ─── Teams ────────────────────────────────────────────────────────────────
+  /teams:
+    get:
+      operationId: listTeams
+      tags: [teams]
+      summary: List all teams
+      responses:
+        "200":
+          description: Teams
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Team"
+    post:
+      operationId: createTeam
+      tags: [teams]
+      summary: Create a new team
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTeamBody"
+      responses:
+        "201":
+          description: Team created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+
+  /teams/me:
+    get:
+      operationId: getMyTeam
+      tags: [teams]
+      summary: Get current user's team
+      responses:
+        "200":
+          description: My team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+        "404":
+          description: Not on a team
+
+  /teams/{id}:
+    get:
+      operationId: getTeam
+      tags: [teams]
+      summary: Get a team by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+        "404":
+          description: Not found
+
+  /teams/{id}/join:
+    post:
+      operationId: joinTeam
+      tags: [teams]
+      summary: Join a team
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Joined team
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Team"
+
+  # ─── Submissions ──────────────────────────────────────────────────────────
+  /submissions:
+    get:
+      operationId: listSubmissions
+      tags: [submissions]
+      summary: List submissions (for current user or team)
+      responses:
+        "200":
+          description: Submissions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Submission"
+
+  # ─── Badges ───────────────────────────────────────────────────────────────
+  /badges:
+    get:
+      operationId: listBadges
+      tags: [badges]
+      summary: List all available badges
+      responses:
+        "200":
+          description: Badges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Badge"
+
+  # ─── Stats (wow) ──────────────────────────────────────────────────────────
+  /stats/summary:
+    get:
+      operationId: getSummaryStats
+      tags: [stats]
+      summary: Get community summary stats (total posts, active users, missions completed, etc.)
+      responses:
+        "200":
+          description: Summary stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SummaryStats"
+
+  /stats/leaderboard:
+    get:
+      operationId: getLeaderboard
+      tags: [stats]
+      summary: Get scavenger hunt leaderboard (top teams by points)
+      responses:
+        "200":
+          description: Leaderboard
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeaderboardEntry"
+
+  /stats/activity:
+    get:
+      operationId: getRecentActivity
+      tags: [stats]
+      summary: Get recent community activity feed
+      responses:
+        "200":
+          description: Recent activity
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ActivityItem"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +713,620 @@ components:
       required:
         - status
 
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        sessionId:
+          type: string
+        displayName:
+          type: string
+        pseudonym:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        timezone:
+          type: ["string", "null"]
+        concentration:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [student, mentor, admin]
+        phase:
+          type: string
+          enum: [pre_arrival, on_campus]
+        comfortSpeaking:
+          type: integer
+        comfortAsking:
+          type: integer
+        comfortMeeting:
+          type: integer
+        onboardingCompleted:
+          type: boolean
+        totalPoints:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - sessionId
+        - displayName
+        - role
+        - phase
+        - comfortSpeaking
+        - comfortAsking
+        - comfortMeeting
+        - onboardingCompleted
+        - totalPoints
+        - createdAt
+
+    UpdateUserBody:
+      type: object
+      properties:
+        displayName:
+          type: string
+        pseudonym:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        timezone:
+          type: ["string", "null"]
+        concentration:
+          type: ["string", "null"]
+        phase:
+          type: string
+          enum: [pre_arrival, on_campus]
+        comfortSpeaking:
+          type: integer
+        comfortAsking:
+          type: integer
+        comfortMeeting:
+          type: integer
+
+    OnboardUserBody:
+      type: object
+      properties:
+        sessionId:
+          type: string
+        displayName:
+          type: string
+        pseudonym:
+          type: ["string", "null"]
+        country:
+          type: ["string", "null"]
+        timezone:
+          type: ["string", "null"]
+        concentration:
+          type: ["string", "null"]
+        phase:
+          type: string
+          enum: [pre_arrival, on_campus]
+        comfortSpeaking:
+          type: integer
+        comfortAsking:
+          type: integer
+        comfortMeeting:
+          type: integer
+      required:
+        - sessionId
+        - displayName
+
+    PrepPath:
+      type: object
+      properties:
+        userId:
+          type: integer
+        milestones:
+          type: array
+          items:
+            $ref: "#/components/schemas/PrepMilestone"
+        completedCount:
+          type: integer
+        totalCount:
+          type: integer
+      required:
+        - userId
+        - milestones
+        - completedCount
+        - totalCount
+
+    PrepMilestone:
+      type: object
+      properties:
+        id:
+          type: string
+        category:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        completed:
+          type: boolean
+        priority:
+          type: integer
+      required:
+        - id
+        - category
+        - title
+        - description
+        - completed
+        - priority
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        color:
+          type: string
+        postCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - slug
+        - description
+        - icon
+        - color
+        - postCount
+        - createdAt
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+        roomId:
+          type: integer
+        userId:
+          type: integer
+        authorName:
+          type: string
+        content:
+          type: string
+        isAnonymous:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        likeCount:
+          type: integer
+        replyCount:
+          type: integer
+        isPinned:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - roomId
+        - userId
+        - authorName
+        - content
+        - isAnonymous
+        - tags
+        - likeCount
+        - replyCount
+        - isPinned
+        - createdAt
+
+    CreatePostBody:
+      type: object
+      properties:
+        content:
+          type: string
+        isAnonymous:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+      required:
+        - content
+
+    Reply:
+      type: object
+      properties:
+        id:
+          type: integer
+        postId:
+          type: integer
+        userId:
+          type: integer
+        authorName:
+          type: string
+        content:
+          type: string
+        isVerified:
+          type: boolean
+        isAnonymous:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - postId
+        - userId
+        - authorName
+        - content
+        - isVerified
+        - isAnonymous
+        - createdAt
+
+    CreateReplyBody:
+      type: object
+      properties:
+        content:
+          type: string
+        isAnonymous:
+          type: boolean
+      required:
+        - content
+
+    Resource:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        summary:
+          type: string
+        content:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        readMinutes:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - summary
+        - content
+        - category
+        - tags
+        - readMinutes
+        - createdAt
+
+    Circle:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        memberCount:
+          type: integer
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/CircleMember"
+        currentPrompt:
+          type: ["string", "null"]
+        responses:
+          type: array
+          items:
+            $ref: "#/components/schemas/CirclePromptResponse"
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - memberCount
+        - members
+        - responses
+        - createdAt
+
+    CircleMember:
+      type: object
+      properties:
+        userId:
+          type: integer
+        displayName:
+          type: string
+        country:
+          type: ["string", "null"]
+      required:
+        - userId
+        - displayName
+
+    CirclePromptResponseBody:
+      type: object
+      properties:
+        response:
+          type: string
+      required:
+        - response
+
+    CirclePromptResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        circleId:
+          type: integer
+        userId:
+          type: integer
+        authorName:
+          type: string
+        prompt:
+          type: string
+        response:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - circleId
+        - userId
+        - authorName
+        - prompt
+        - response
+        - createdAt
+
+    Mission:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [resource_discovery, academic_support, mental_health, social_integration, hidden_curriculum]
+        points:
+          type: integer
+        location:
+          type: ["string", "null"]
+        requiresPhoto:
+          type: boolean
+        requiresReflection:
+          type: boolean
+        badgeId:
+          type: ["integer", "null"]
+        isCompleted:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - title
+        - description
+        - type
+        - points
+        - requiresPhoto
+        - requiresReflection
+        - isCompleted
+        - createdAt
+
+    SubmitMissionBody:
+      type: object
+      properties:
+        reflection:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+        teamId:
+          type: ["integer", "null"]
+      required:
+        - reflection
+
+    Submission:
+      type: object
+      properties:
+        id:
+          type: integer
+        missionId:
+          type: integer
+        userId:
+          type: integer
+        teamId:
+          type: ["integer", "null"]
+        reflection:
+          type: string
+        photoUrl:
+          type: ["string", "null"]
+        pointsEarned:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - missionId
+        - userId
+        - reflection
+        - pointsEarned
+        - createdAt
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        totalPoints:
+          type: integer
+        memberCount:
+          type: integer
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/TeamMember"
+        completedMissions:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - totalPoints
+        - memberCount
+        - members
+        - completedMissions
+        - createdAt
+
+    TeamMember:
+      type: object
+      properties:
+        userId:
+          type: integer
+        displayName:
+          type: string
+        country:
+          type: ["string", "null"]
+        totalPoints:
+          type: integer
+      required:
+        - userId
+        - displayName
+        - totalPoints
+
+    CreateTeamBody:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    Badge:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        icon:
+          type: string
+        category:
+          type: string
+      required:
+        - id
+        - name
+        - description
+        - icon
+        - category
+
+    UserBadge:
+      type: object
+      properties:
+        badge:
+          $ref: "#/components/schemas/Badge"
+        earnedAt:
+          type: string
+          format: date-time
+      required:
+        - badge
+        - earnedAt
+
+    SummaryStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        totalPosts:
+          type: integer
+        totalMissionsCompleted:
+          type: integer
+        totalTeams:
+          type: integer
+        topRooms:
+          type: array
+          items:
+            type: object
+            properties:
+              roomName:
+                type: string
+              postCount:
+                type: integer
+            required:
+              - roomName
+              - postCount
+        badgesAwarded:
+          type: integer
+      required:
+        - totalUsers
+        - totalPosts
+        - totalMissionsCompleted
+        - totalTeams
+        - topRooms
+        - badgesAwarded
+
+    LeaderboardEntry:
+      type: object
+      properties:
+        rank:
+          type: integer
+        teamId:
+          type: integer
+        teamName:
+          type: string
+        totalPoints:
+          type: integer
+        completedMissions:
+          type: integer
+        memberCount:
+          type: integer
+      required:
+        - rank
+        - teamId
+        - teamName
+        - totalPoints
+        - completedMissions
+        - memberCount
+
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [post_created, mission_completed, badge_earned, circle_joined]
+        actorName:
+          type: string
+        description:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - actorName
+        - description
+        - createdAt

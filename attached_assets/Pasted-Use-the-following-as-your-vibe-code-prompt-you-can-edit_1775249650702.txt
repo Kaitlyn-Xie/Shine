@@ -1,0 +1,249 @@
+Use the following as your “vibe code” prompt (you can edit names/phrasing, but keep the structure for best results):
+
+---
+
+You are designing a **mobile-first web app** for **Harvard College international undergraduates**. The app has **two main phases**:
+
+1. **Pre‑arrival: an inclusive, safe information‑sharing and community space**
+2. **Post‑arrival: an in‑person interactive scavenger hunt to get to know campus resources, spaces, and people that focusses on in-person connection.**
+
+The goal is to reduce isolation, demystify the hidden curriculum, and help international students feel prepared, welcomed, and connected.
+
+### Target users
+
+- Incoming Harvard College international students, many from educational systems emphasizing rote memorization, limited group work, and little exposure to U.S. classroom norms.
+
+### Core problems to address (from research)
+
+- **Academic transition & hidden curriculum**
+  - Students are underprepared for U.S. teaching style (participation, p‑sets, collaboration).
+  - Don’t understand “hidden curriculum” around:
+    - Course selection strategy (e.g., back‑to‑back classes, workload balance).
+    - Getting internships/summer opportunities (especially with visa constraints).
+    - Navigating funding, research, and competitive programs.
+  - U.S.-specific references in class (politics, pop culture, economics examples) create barriers.
+
+- **Basic needs & logistics**
+  - Confusion around **housing during winter/spring breaks** and summer.
+  - Lack of clear information on **funding for summer**, visa limits on work, and what “full financial aid” does/does not cover (laundry, toiletries, daily essentials).
+  - Stress around finding **summer housing** and jobs/internships in the U.S.
+
+- **Social integration & extracurriculars**
+  - Students struggle to join clubs; competitive club culture feels exclusionary.
+  - Many international students must work on‑campus jobs, leaving less time for social life.
+  - Limited mixing between international and domestic students; missed cultural exchange.
+
+- **Well‑being & mental health**
+  - Orientation mentions mental health resources, but students are:
+    - Overwhelmed at first and don’t use them when they most need them.
+    - Uncomfortable sharing with strangers; worried about worrying their families.
+  - Support drops sharply after the first few weeks; international pre‑orientation (like FIP) is helpful but not sustained.
+
+- **Visa, jobs, and career support**
+  - Faculty and staff often don’t understand visa limits and international job search realities.
+  - Career centers lack clearly relevant opportunities and guidance for international students.
+  - Students have to self‑navigate the U.S. job market and networking norms.
+
+### Overall product vision
+
+Design an app that:
+
+- **Before arrival**
+  - Provides a **psychologically safe**, low‑pressure space where incoming international students can:
+    - Ask “basic” or sensitive questions anonymously or semi‑anonymously.
+    - Learn from curated, trustworthy content and lived experiences of current students.
+    - Understand academic norms, hidden curriculum, and basic logistical realities early.
+  - Reduces anxiety by **clarifying what to expect** in academics, social life, finances, jobs, and culture.
+
+- **After arrival**
+  - Turns orientation and the first semester into a fun, interactive **scavenger hunt** (similar to GooseChase) that:
+    - Physically takes students to key Harvard spaces and resources (e.g., international office, health & counseling, financial aid office, libraries, writing center, career services, dining halls, community centers, etc.).
+    - Facilitates **in‑person connections** with other international students and domestic peers.
+    - Rewards curiosity, collaboration, and exploration rather than competition.
+
+---
+
+## Phase 1: Pre‑arrival space (digital, remote)
+
+### Core features
+
+1. **Onboarding & profiles**
+   - Simple onboarding with:
+     - Name (optional display name / nickname).
+     - Country/region, time zone.
+     - Intended concentration (optional).
+     - Comfort levels: speaking in groups, asking questions publicly, meeting new people.
+   - Option to use a **pseudonym** in group spaces to reduce anxiety.
+
+2. **Themed “Safe Rooms” (channels or spaces)**
+   - Create topic‑based discussion spaces where incoming students can post or browse:
+     - “Academics & Learning Style”
+     - “Hidden Curriculum & Class Planning”
+     - “Money, Housing, & Everyday Life”
+     - “Jobs, Internships, & Visas”
+     - “Mental Health & Well‑Being”
+     - “Social Life, Clubs, & Making Friends”
+     - “U.S. Culture & Harvard Culture”
+   - In each space, users can:
+     - Post questions (with **anonymous posting** toggle).
+     - React/like and reply.
+     - Tag posts with sub‑topics (e.g., “econ,” “STEM p‑sets,” “winter break,” “club comps”).
+
+3. **Peer‑validated answers and stories**
+   - Allow **verified upper‑class international students** and trained peer mentors to:
+     - Mark answers as “Helpful” or “Verified from experience.”
+     - Share **short stories** (e.g., “What I wish I knew before my first exam,” “How I found summer housing,” “My first club comp horror story and what I learned.”).
+   - Highlight **multiple perspectives**, not just official “rules.”
+
+4. **Curated resources distilled from Harvard’s existing info**
+   - Create **short, digestible guides** (cards or FAQs) that translate official info into student‑friendly language, with examples:
+     - “How to read the course catalog & plan your schedule without burning out.”
+     - “Intro to p‑sets & collaboration norms (what’s allowed, what’s not).”
+     - “Understanding financial aid, hidden costs (laundry, toiletries, flights), and what’s covered.”
+     - “Break housing: what happens during winter and spring; what options exist.”
+     - “Summer funding and internships for internationals: timelines & strategies.”
+     - “Mental health: what it actually looks like to use counseling at Harvard.”
+   - Include **search** across guides and Q&A.
+
+5. **Light‑touch social connection before arrival**
+   - Features that avoid pressure but build familiarity:
+     - Country/region‑based groups (e.g., “Students from China”) and interest‑based groups (e.g., “First‑gen / low‑income,” “STEM,” “Humanities & Arts”).
+     - Optional **small “buddy circles”** (3–6 students) auto‑matched around common interests/time zones, with low‑commitment icebreaker prompts.
+     - Async prompts like: “Share one thing you’re excited about and one thing you’re worried about.”
+
+6. **Moderation, safety, and tone**
+   - Clear **community guidelines** emphasizing:
+     - Respect for accents, backgrounds, and different educational systems.
+     - Non‑judgmental, no‑shame questions.
+   - Basic reporting tools for posts or replies.
+   - Human moderators (peer mentors/staff) have simple dashboards to:
+     - Pin important posts.
+     - Remove harmful content.
+     - Send gentle reminders or supportive messages.
+
+7. **Personalized “prep path”**
+   - After onboarding, generate a **personalized checklist/timeline**:
+     - Academic: watch/read 1–2 pieces about U.S. classroom norms, p‑sets, office hours.
+     - Life logistics: learn about break housing and daily costs.
+     - Mental health: a gentle intro to support options and real student testimonials.
+   - Include **optional micro‑tasks** (short videos, quizzes, reflection prompts) to make it interactive but not burdensome.
+
+---
+
+## Phase 2: On‑campus interactive scavenger hunt
+
+This phase starts **once students are physically on campus** and builds on the relationships and knowledge from Phase 1.
+
+### Core concept
+
+An app‑based **mission system** (like GooseChase) where students or small teams complete **location‑based and interaction‑based challenges** that guide them to key Harvard spaces and people, with rewards that are fun and social rather than purely competitive.
+
+### Key design goals
+
+- Help international students:
+  - Physically locate and feel comfortable entering key resource offices and community spaces.
+  - Practice **low‑stakes social interactions** with peers, staff, and domestic students.
+  - Learn hidden curriculum tips embedded in missions.
+  - Normalize help‑seeking (academic, financial, mental health).
+
+### Core features
+
+1. **Teams & participation options**
+   - Students can:
+     - Join auto‑assigned mixed teams (international + domestic peers where possible).
+     - Or form their own team with friends they met online or at orientation.
+   - Also allow a **solo mode** for shy students, with missions tailored to gentle, non‑embarrassing tasks.
+
+2. **Mission types (examples)**
+   Design mission templates the app can support:
+
+   - **Resource discovery missions**
+     - Example: “Visit the **Office of International Education / International Office**. Take a photo of something that surprised you or that you think will be important this year. Write one question you might ask them in the future.”
+     - “Find the **financial aid office**. Ask anonymously or in person: ‘What should an international student do if they’re worried about money for breaks or summer?’ Summarize one tip.”
+
+   - **Academic support missions**
+     - “Go to the **writing center** or a **tutoring space**. Snap a photo of the entrance and record one myth about academic help that’s not true.”
+     - “Find where your **intro classes** will be held. With a teammate, practice asking: ‘Could you clarify this concept?’ and type one sentence you’d say to a professor in office hours.”
+
+   - **Mental health and well‑being missions**
+     - “Locate the **counseling and mental health services** building. Without taking intrusive photos, capture a symbolic image (e.g., a sign, a tree) and write one reason someone might come here that is totally normal.”
+     - “Go to a **green space/walking path** on campus. Reflect in 1–2 sentences on one self‑care habit you want to keep.”
+
+   - **Cultural & social integration missions**
+     - “Attend or visit a **student organization fair** or a club meeting. Take a picture of one club that seems interesting and share why, even if you’re not sure you’ll join.”
+     - “Introduce yourself to one domestic student and ask them: ‘What is one thing you wish international students knew about life here?’ Record their advice (with consent) in text form.”
+
+   - **Hidden curriculum missions**
+     - “Ask a sophomore or junior: ‘What’s one mistake you made with course selection your first semester?’ Summarize their advice.”
+     - “Find a spot where students normally do p‑sets. Capture an image of the space and write one question you still have about collaboration / academic honesty.”
+
+3. **Game mechanics**
+   - Points for:
+     - Completing missions (more points for missions that involve talking to someone or visiting key support services).
+     - Reflective answers, not just taking photos.
+   - Badges for:
+     - “Resource Explorer” – visited X support offices.
+     - “Community Connector” – interacted with Y peers/staff.
+     - “Hidden Curriculum Detective” – completed missions about course planning, jobs, etc.
+   - Option for **team leaderboards**, but emphasize **collaborative and completion‑based rewards** over pure competition.
+   - Small, tangible or symbolic rewards (if integrated with staff): lunch with peer mentors, swag, certificates.
+
+4. **Accessibility & inclusion in scavenger design**
+   - Ensure missions:
+     - Do not require late‑night activity or long off‑campus travel (sensitive to safety & cost).
+     - Have **alternative versions** for students with mobility, sensory, or mental health needs.
+     - Avoid culturally insensitive or embarrassing tasks (no forced public performance or accent‑mocking).
+
+5. **Integration with pre‑arrival data**
+   - Use optional interest/concern data from Phase 1 to recommend missions:
+     - If a student expressed high anxiety about finances, prioritize missions that connect them to financial aid and funding offices.
+     - If anxious about mental health, show gentle missions that introduce counseling resources and peer‑support communities.
+
+6. **Post‑hunt reflection and continuity**
+   - After the hunt period (e.g., first 2–4 weeks of term), the app:
+     - Prompts short reflections: “Which place/person felt most approachable? Least approachable? What still feels confusing?”
+     - Surfaces **ongoing events** or programs from those offices.
+     - Encourages students to stay in buddy circles or small groups established during the hunt.
+
+---
+
+## Non‑functional requirements & experience goals
+
+- **Tone & UX**
+  - Warm, informal, non‑judgmental language.
+  - Emphasize that **confusion is normal** and everyone is figuring things out.
+  - Use simple English and avoid U.S.-specific slang without explanation.
+
+- **Privacy & safety**
+  - Allow pseudonyms and anonymous posting in Phase 1.
+  - Control visibility of photos and content from scavenger hunt (e.g., only visible to team or within the app community).
+  - Clear consent prompts for sharing other people’s quotes or images.
+
+- **Admin/mentor tools**
+  - Simple dashboards for staff/mentors to:
+     - Post announcements and time‑sensitive info (e.g., deadlines, visa info sessions).
+     - Create/modify missions and activate them for specific cohorts.
+     - View anonymized engagement stats to identify where students are struggling (e.g., many questions about housing, mental health).
+
+- **Scalability**
+  - Designed so it can later support other cohorts (non‑African regions, grad students) with minimal configuration changes:
+    - Customizable channels/topics.
+    - Editable mission templates and resource guides.
+
+---
+
+Using all of the above, design the complete information architecture, main user flows, and interface elements for this app. Prioritize:
+
+- Reducing anxiety and isolation.
+- Surfacing hidden curriculum knowledge.
+- Encouraging sustainable, meaningful in‑person connections between international and domestic students.
+- Smooth transition from **pre‑arrival digital space** to **on‑campus interactive scavenger hunt**.
+
+Output:
+
+- A clear breakdown of screens/pages and navigation.
+- Key data models (users, groups, questions, missions, submissions, badges).
+- Example content for at least 5 pre‑arrival guides and 10 scavenger hunt missions.
+- Suggestions for lightweight gamification and moderation that preserve psychological safety.
+
+---
