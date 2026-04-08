@@ -32,12 +32,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="mx-auto max-w-[430px] min-h-[100dvh] bg-background flex flex-col shadow-xl overflow-hidden relative">
-      <main className="flex-1 overflow-y-auto pb-20 no-scrollbar relative z-10">
+    <div className="mx-auto max-w-[430px] h-[100dvh] bg-background flex flex-col shadow-xl overflow-hidden relative">
+      <main className="flex-1 overflow-y-auto pb-2 no-scrollbar relative z-10">
         {children}
       </main>
 
-      <nav className="absolute bottom-0 w-full bg-card border-t border-border z-50 flex items-center justify-around px-2 py-3 pb-safe">
+      <nav className="shrink-0 w-full bg-card border-t border-border z-50 flex items-center justify-around px-2 py-3 pb-safe">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = location === tab.href || location.startsWith(`${tab.href}/`);
