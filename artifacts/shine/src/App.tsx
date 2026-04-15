@@ -17,6 +17,7 @@ import Resources from "@/pages/Resources";
 import ResourceDetail from "@/pages/ResourceDetail";
 import Circles from "@/pages/Circles";
 import PrepPath from "@/pages/PrepPath";
+import Chat from "@/pages/Chat";
 import Hunt from "@/pages/Hunt";
 import Missions from "@/pages/Missions";
 import MissionDetail from "@/pages/MissionDetail";
@@ -54,6 +55,9 @@ function AppRouter() {
       </Route>
       <Route path="/rooms/:roomId/posts/:id">
         <Layout><PrivateRoute component={PostDetail} /></Layout>
+      </Route>
+      <Route path="/chat">
+        <Layout><PrivateRoute component={Chat} /></Layout>
       </Route>
       <Route path="/resources">
         <Layout><PrivateRoute component={Resources} /></Layout>

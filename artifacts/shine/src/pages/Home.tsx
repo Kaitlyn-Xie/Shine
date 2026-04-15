@@ -1,176 +1,288 @@
-import { useGetMe, useGetRecentActivity, useGetSummaryStats, useGetMePrepPath, useGetMyTeam, useGetLeaderboard, getGetRecentActivityQueryKey, getGetSummaryStatsQueryKey, getGetMePrepPathQueryKey, getGetMyTeamQueryKey, getGetLeaderboardQueryKey } from "@workspace/api-client-react";
-import { Loader2, ArrowRight, Activity, Trophy, Users, BookOpen } from "lucide-react";
-import { Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { motion } from "framer-motion";
+import { useState } from 'react'
+import { SunIcon, SearchIcon, HeartIcon, BookmarkIcon, PlusIcon, CloseIcon, CameraIcon, VideoIcon, PinIcon, Avatar } from '@/components/Icons'
+import { useGetMe } from '@workspace/api-client-react'
+
+const SEED_POSTS = [
+  {
+    id: 1, username: 'Mei Lin', country: 'China', initials: 'ML',
+    avatarBg: 'linear-gradient(135deg, #FFD6B0, #FF9A3C)',
+    img: 'https://picsum.photos/seed/harvard1/400/320', imgH: 200,
+    text: "Just arrived at Harvard! The campus is absolutely beautiful. Can't wait to explore everything.",
+    tags: ['arrival', 'harvard', 'excited'],
+    likes: 42,
+  },
+  {
+    id: 2, username: 'Lucas M.', country: 'Brazil', initials: 'LM',
+    avatarBg: 'linear-gradient(135deg, #B8FFD0, #3CB87A)',
+    img: 'https://picsum.photos/seed/coffee2/400/420', imgH: 260,
+    text: 'Best coffee on campus is at the Science Center café. Trust me on this one.',
+    tags: ['tips', 'food', 'studylife'],
+    likes: 87,
+  },
+  {
+    id: 3, username: 'Priya S.', country: 'India', initials: 'PS',
+    avatarBg: 'linear-gradient(135deg, #B8D8FF, #5599EE)',
+    img: 'https://picsum.photos/seed/student3/400/290', imgH: 180,
+    text: 'Got my student ID and bank account sorted in one day! DM me if you need help navigating the admin stuff.',
+    tags: ['admin', 'banking', 'studentid'],
+    likes: 134,
+  },
+  {
+    id: 4, username: 'Ji-ho P.', country: 'South Korea', initials: 'JP',
+    avatarBg: 'linear-gradient(135deg, #F0C8FF, #CC66FF)',
+    img: 'https://picsum.photos/seed/campus4/400/370', imgH: 230,
+    text: 'The scavenger hunt was incredible. Our team found every hidden spot on campus!',
+    tags: ['scavengerhunt', 'team', 'campus'],
+    likes: 56,
+  },
+  {
+    id: 5, username: 'Omar K.', country: 'Egypt', initials: 'OK',
+    avatarBg: 'linear-gradient(135deg, #FFE0B0, #FF8C00)',
+    img: 'https://picsum.photos/seed/yard5/400/340', imgH: 210,
+    text: 'Harvard Yard in the morning light is something else entirely. 6am walks are now a ritual.',
+    tags: ['harvardyard', 'morning', 'vibes'],
+    likes: 203,
+  },
+  {
+    id: 6, username: 'Sofia R.', country: 'Germany', initials: 'SR',
+    avatarBg: 'linear-gradient(135deg, #FFB8C8, #EE4466)',
+    img: 'https://picsum.photos/seed/group6/400/270', imgH: 170,
+    text: 'Found the European Students group — so nice to meet everyone from home regions!',
+    tags: ['europeans', 'community', 'friends'],
+    likes: 78,
+  },
+]
+
+interface Post {
+  id: number
+  username: string
+  country: string
+  initials: string
+  avatarBg: string
+  img: string
+  imgH: number
+  text: string
+  tags: string[]
+  likes: number
+}
+
+function PostCard({ post }: { post: Post }) {
+  const [liked, setLiked] = useState(false)
+  const [saved, setSaved] = useState(false)
+  const [likeCount, setLikeCount] = useState(post.likes)
+
+  return (
+    <div style={{
+      background: '#fff',
+      borderRadius: 16,
+      overflow: 'hidden',
+      boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+      marginBottom: 16,
+    }}>
+      {/* Post image */}
+      <img
+        src={post.img}
+        alt=""
+        style={{ width: '100%', height: post.imgH, objectFit: 'cover', display: 'block' }}
+      />
+
+      {/* Post body */}
+      <div style={{ padding: '14px 16px 12px' }}>
+        {/* Author row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+          <Avatar name={post.username} size={36} bg={post.avatarBg} />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>{post.username}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>🌍 {post.country}</div>
+          </div>
+        </div>
+
+        {/* Text */}
+        <p style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--text)', marginBottom: 10 }}>{post.text}</p>
+
+        {/* Tags */}
+        {post.tags.length > 0 && (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+            {post.tags.map(tag => (
+              <span key={tag} style={{ fontSize: 12, color: 'var(--orange)', fontWeight: 600 }}>#{tag}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button
+            onClick={() => { setLiked(!liked); setLikeCount(c => liked ? c - 1 : c + 1) }}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            <HeartIcon size={18} color={liked ? '#EE4466' : '#9A9A9A'} filled={liked} />
+            <span style={{ fontSize: 13, color: liked ? '#EE4466' : 'var(--text-secondary)', fontWeight: liked ? 700 : 400 }}>{likeCount}</span>
+          </button>
+          <button
+            onClick={() => setSaved(!saved)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
+          >
+            <BookmarkIcon size={18} color={saved ? '#FFC94A' : '#9A9A9A'} filled={saved} />
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function CreatePostSheet({ onClose, onSubmit }: { onClose: () => void; onSubmit: (p: Post) => void }) {
+  const [text, setText] = useState('')
+  const [tags, setTags] = useState('')
+
+  const handleSubmit = () => {
+    if (!text.trim()) return
+    const seed = Date.now()
+    onSubmit({
+      id: seed,
+      username: 'You',
+      country: 'Your Country',
+      initials: 'ME',
+      avatarBg: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
+      img: `https://picsum.photos/seed/${seed}/400/320`,
+      imgH: 200,
+      text: text.trim(),
+      tags: tags.split(' ').filter(t => t.startsWith('#')).map(t => t.slice(1)),
+      likes: 0,
+    })
+  }
+
+  return (
+    <div
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 200 }}
+    >
+      <div className="slide-up" style={{ background: '#fff', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 430, padding: 24, paddingBottom: 40 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h2 style={{ fontSize: 17, fontWeight: 800 }}>Share with the community</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+            <CloseIcon size={20} color="#4A4A4A" />
+          </button>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 16 }}>
+          <Avatar name="Me" size={38} />
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder="Share something with the community..."
+            autoFocus
+            style={{ flex: 1, border: 'none', outline: 'none', resize: 'none', fontSize: 15, lineHeight: 1.6, color: 'var(--text)', background: 'transparent', minHeight: 100, fontFamily: 'inherit' }}
+          />
+        </div>
+
+        <div style={{ border: '1.5px solid var(--border)', borderRadius: 12, padding: '10px 14px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', padding: 0 }}>
+              <CameraIcon size={18} color="var(--text-secondary)" /> Photo
+            </button>
+            <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', padding: 0 }}>
+              <VideoIcon size={18} color="var(--text-secondary)" /> Video
+            </button>
+            <button style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text-secondary)', padding: 0 }}>
+              <PinIcon size={18} color="var(--text-secondary)" /> Location
+            </button>
+          </div>
+        </div>
+
+        <input
+          value={tags}
+          onChange={e => setTags(e.target.value)}
+          placeholder="Add tags, e.g. #harvard #tips #arrival"
+          style={{ width: '100%', border: '1.5px solid var(--border)', borderRadius: 12, padding: '10px 14px', fontSize: 14, color: 'var(--text)', background: 'transparent', outline: 'none', marginBottom: 20, boxSizing: 'border-box' }}
+        />
+
+        <button
+          onClick={handleSubmit}
+          style={{ width: '100%', background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)', border: 'none', borderRadius: 14, padding: '14px 0', fontSize: 16, fontWeight: 700, color: '#fff', cursor: 'pointer', boxShadow: '0 4px 16px rgba(255,154,60,0.35)' }}
+        >
+          Post
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function Home() {
-  const { data: user, isLoading: isUserLoading } = useGetMe();
-  
-  if (isUserLoading || !user) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin text-primary" /></div>;
+  const { data: user } = useGetMe({ query: { retry: false } })
+  const [posts, setPosts] = useState<Post[]>(SEED_POSTS)
+  const [showCreate, setShowCreate] = useState(false)
 
-  const isPreArrival = user.phase === "pre_arrival";
-
-  return (
-    <div className="p-6 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <header className="pt-4">
-        <h1 className="text-2xl font-bold text-foreground">Good morning, {user.displayName}.</h1>
-        <p className="text-muted-foreground mt-1">We're glad you're here.</p>
-      </header>
-
-      {isPreArrival ? <PreArrivalDashboard /> : <OnCampusDashboard />}
-    </div>
-  );
-}
-
-function PreArrivalDashboard() {
-  const { data: prepPath, isLoading: isPrepLoading } = useGetMePrepPath({ query: { queryKey: getGetMePrepPathQueryKey() } });
-  const { data: activity } = useGetRecentActivity({ query: { queryKey: getGetRecentActivityQueryKey() } });
-  const { data: stats } = useGetSummaryStats({ query: { queryKey: getGetSummaryStatsQueryKey() } });
+  const addPost = (post: Post) => {
+    setPosts(prev => [post, ...prev])
+    setShowCreate(false)
+  }
 
   return (
-    <div className="space-y-6">
-      <Card className="bg-primary/5 border-primary/10 shadow-sm">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex justify-between items-center">
-            <span>Your Prep Path</span>
-            <span className="text-primary text-sm font-medium">{prepPath?.completedCount || 0}/{prepPath?.totalCount || 0}</span>
-          </CardTitle>
-          <CardDescription>Small steps to get you ready for Harvard.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Progress value={prepPath ? (prepPath.completedCount / prepPath.totalCount) * 100 : 0} className="h-2 mb-4" />
-          <Link href="/prep-path" className="text-primary text-sm font-medium flex items-center hover:underline">
-            Continue preparing <ArrowRight className="w-4 h-4 ml-1" />
-          </Link>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Link href="/rooms">
-          <Card className="hover:bg-accent/5 transition-colors cursor-pointer shadow-sm h-full">
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-2 h-full">
-              <div className="w-10 h-10 rounded-full bg-accent/20 text-accent flex items-center justify-center">
-                <Users className="w-5 h-5" />
-              </div>
-              <div className="font-medium">Safe Rooms</div>
-              <div className="text-xs text-muted-foreground">Ask anything anonymously</div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/circles">
-          <Card className="hover:bg-accent/5 transition-colors cursor-pointer shadow-sm h-full">
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-2 h-full">
-              <div className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center">
-                <Activity className="w-5 h-5" />
-              </div>
-              <div className="font-medium">Buddy Circles</div>
-              <div className="text-xs text-muted-foreground">Meet your cohort</div>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
-
-      <div className="space-y-3">
-        <h3 className="font-semibold text-lg flex items-center gap-2">
-          <Activity className="w-5 h-5 text-muted-foreground" />
-          Community Pulse
-        </h3>
-        {activity?.slice(0, 3).map((item, i) => (
-          <motion.div key={item.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
-            <Card className="shadow-xs border-border/50">
-              <CardContent className="p-3 text-sm flex gap-3">
-                <div className="w-2 h-2 mt-1.5 rounded-full bg-primary/40 shrink-0" />
-                <div>
-                  <span className="font-medium">{item.actorName}</span> <span className="text-muted-foreground">{item.description}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function OnCampusDashboard() {
-  const { data: team } = useGetMyTeam({ query: { queryKey: getGetMyTeamQueryKey() } });
-  const { data: leaderboard } = useGetLeaderboard({ query: { queryKey: getGetLeaderboardQueryKey() } });
-
-  return (
-    <div className="space-y-6">
-      <Card className="bg-primary/5 border-primary/10 shadow-sm overflow-hidden relative">
-        <div className="absolute right-0 top-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-10 -mt-10" />
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl">Scavenger Hunt</CardTitle>
-          <CardDescription>Explore campus, earn points, find your way.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {team ? (
-            <div className="bg-white/50 dark:bg-black/20 rounded-lg p-3 flex justify-between items-center mb-4">
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">Your Team</div>
-                <div className="font-bold">{team.name}</div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-medium text-muted-foreground">Points</div>
-                <div className="font-bold text-primary">{team.totalPoints}</div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground mb-4">Join a team to start earning points!</div>
+    <div className="fade-in" style={{ background: 'var(--bg)', minHeight: '100%' }}>
+      {/* Header */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '14px 20px 12px',
+        background: '#fff',
+        borderBottom: '1px solid var(--border)',
+        position: 'sticky', top: 0, zIndex: 50,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="sun-pulse">
+            <SunIcon size={22} color="#FFC94A" />
+          </div>
+          <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: -0.5 }}>SHINE</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+          <button style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+            <SearchIcon size={20} color="#4A4A4A" />
+          </button>
+          {user && (
+            <Avatar name={user.displayName || 'U'} size={32} />
           )}
-          <Link href="/hunt" className="text-primary text-sm font-medium flex items-center hover:underline">
-            Go to Hunt <ArrowRight className="w-4 h-4 ml-1" />
-          </Link>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-2 gap-4">
-        <Link href="/rooms">
-          <Card className="hover:bg-accent/5 transition-colors cursor-pointer shadow-sm h-full">
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-2 h-full">
-              <div className="w-10 h-10 rounded-full bg-accent/20 text-accent flex items-center justify-center">
-                <Users className="w-5 h-5" />
-              </div>
-              <div className="font-medium">Safe Rooms</div>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/resources">
-          <Card className="hover:bg-accent/5 transition-colors cursor-pointer shadow-sm h-full">
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-2 h-full">
-              <div className="w-10 h-10 rounded-full bg-secondary text-secondary-foreground flex items-center justify-center">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <div className="font-medium">Resources</div>
-            </CardContent>
-          </Card>
-        </Link>
+        </div>
       </div>
 
-      {leaderboard && leaderboard.length > 0 && (
-        <div className="space-y-3">
-          <h3 className="font-semibold text-lg flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-amber-500" />
-            Top Teams
-          </h3>
-          <Card className="shadow-sm">
-            <div className="divide-y divide-border/50">
-              {leaderboard.slice(0, 3).map((entry) => (
-                <div key={entry.teamId} className="p-3 flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 text-center font-bold text-muted-foreground">{entry.rank}</div>
-                    <div className="font-medium">{entry.teamName}</div>
-                  </div>
-                  <div className="font-bold">{entry.totalPoints} <span className="text-muted-foreground text-xs font-normal">pts</span></div>
-                </div>
-              ))}
-            </div>
-          </Card>
+      {/* Welcome pill */}
+      {user && (
+        <div style={{ padding: '12px 20px 4px' }}>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'linear-gradient(135deg, #FFF9ED, #FFF3D4)',
+            border: '1.5px solid #FFE8A0',
+            borderRadius: 20, padding: '6px 14px',
+          }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--orange)' }}>
+              Welcome, {user.displayName}! 👋
+            </span>
+          </div>
         </div>
       )}
+
+      {/* Feed */}
+      <div style={{ padding: '14px 16px 80px' }}>
+        {posts.map((post) => (
+          <PostCard key={post.id} post={post} />
+        ))}
+      </div>
+
+      {/* FAB */}
+      <button
+        onClick={() => setShowCreate(true)}
+        style={{
+          position: 'fixed', bottom: 88, right: 16,
+          width: 48, height: 48,
+          background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
+          border: 'none', borderRadius: '50%', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 4px 16px rgba(255,154,60,0.45)',
+          zIndex: 100,
+        }}
+      >
+        <PlusIcon size={22} color="#fff" />
+      </button>
+
+      {showCreate && <CreatePostSheet onClose={() => setShowCreate(false)} onSubmit={addPost} />}
     </div>
-  );
+  )
 }
