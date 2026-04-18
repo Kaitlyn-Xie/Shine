@@ -11,7 +11,7 @@ import { PlusIcon } from './components/Icons'
 export default function App() {
   const [tab, setTab] = useState('home')
   const [showProfile, setShowProfile] = useState(false)
-  const [mapUnlocked, setMapUnlocked] = useState(false)
+  const [mapUnlocked, setMapUnlocked] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [posts, setPosts] = useState([])
 
