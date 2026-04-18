@@ -5,11 +5,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { setAuthTokenGetter } from "@workspace/api-client-react";
 import { getSessionId } from "@/lib/session";
 import { Layout } from "@/components/Layout";
-import { PrivateRoute } from "@/components/PrivateRoute";
 import NotFound from "@/pages/not-found";
 
-import Onboarding from "@/pages/Onboarding";
+import MapHome from "@/pages/MapHome";
 import Home from "@/pages/Home";
+import Chat from "@/pages/Chat";
+import Profile from "@/pages/Profile";
+import Onboarding from "@/pages/Onboarding";
 import Rooms from "@/pages/Rooms";
 import RoomDetail from "@/pages/RoomDetail";
 import PostDetail from "@/pages/PostDetail";
@@ -17,16 +19,13 @@ import Resources from "@/pages/Resources";
 import ResourceDetail from "@/pages/ResourceDetail";
 import Circles from "@/pages/Circles";
 import PrepPath from "@/pages/PrepPath";
-import Chat from "@/pages/Chat";
 import Hunt from "@/pages/Hunt";
 import Missions from "@/pages/Missions";
 import MissionDetail from "@/pages/MissionDetail";
 import Leaderboard from "@/pages/Leaderboard";
 import Team from "@/pages/Team";
 import Badges from "@/pages/Badges";
-import Profile from "@/pages/Profile";
 
-// Ensure requests have session ID
 setAuthTokenGetter(() => getSessionId());
 
 const queryClient = new QueryClient({
@@ -41,58 +40,80 @@ const queryClient = new QueryClient({
 function AppRouter() {
   return (
     <Switch>
-      <Route path="/" component={Onboarding} />
-      
-      {/* Protected Routes inside Layout */}
-      <Route path="/home">
-        <Layout><PrivateRoute component={Home} /></Layout>
+      {/* Default: map home screen */}
+      <Route path="/">
+        <Layout><MapHome /></Layout>
       </Route>
+
+      {/* Post feed tab */}
+      <Route path="/post">
+        <Layout><Home /></Layout>
+      </Route>
+
+      {/* Chat tab */}
+      <Route path="/chat">
+        <Layout><Chat /></Layout>
+      </Route>
+
+      {/* Profile tab */}
+      <Route path="/profile">
+        <Layout><Profile /></Layout>
+      </Route>
+
+      {/* Onboarding */}
+      <Route path="/onboarding" component={Onboarding} />
+
+      {/* Q&A rooms */}
       <Route path="/rooms">
-        <Layout><PrivateRoute component={Rooms} /></Layout>
+        <Layout><Rooms /></Layout>
       </Route>
       <Route path="/rooms/:id">
-        <Layout><PrivateRoute component={RoomDetail} /></Layout>
+        <Layout><RoomDetail /></Layout>
       </Route>
       <Route path="/rooms/:roomId/posts/:id">
-        <Layout><PrivateRoute component={PostDetail} /></Layout>
+        <Layout><PostDetail /></Layout>
       </Route>
-      <Route path="/chat">
-        <Layout><PrivateRoute component={Chat} /></Layout>
-      </Route>
+
+      {/* Resources */}
       <Route path="/resources">
-        <Layout><PrivateRoute component={Resources} /></Layout>
+        <Layout><Resources /></Layout>
       </Route>
       <Route path="/resources/:id">
-        <Layout><PrivateRoute component={ResourceDetail} /></Layout>
+        <Layout><ResourceDetail /></Layout>
       </Route>
+
+      {/* Circles */}
       <Route path="/circles">
-        <Layout><PrivateRoute component={Circles} /></Layout>
+        <Layout><Circles /></Layout>
       </Route>
+
+      {/* Prep path */}
       <Route path="/prep-path">
-        <Layout><PrivateRoute component={PrepPath} /></Layout>
+        <Layout><PrepPath /></Layout>
       </Route>
+
+      {/* Hunt / scavenger */}
       <Route path="/hunt">
-        <Layout><PrivateRoute component={Hunt} /></Layout>
+        <Layout><Hunt /></Layout>
       </Route>
       <Route path="/hunt/missions">
-        <Layout><PrivateRoute component={Missions} /></Layout>
+        <Layout><Missions /></Layout>
       </Route>
       <Route path="/hunt/missions/:id">
-        <Layout><PrivateRoute component={MissionDetail} /></Layout>
+        <Layout><MissionDetail /></Layout>
       </Route>
       <Route path="/hunt/leaderboard">
-        <Layout><PrivateRoute component={Leaderboard} /></Layout>
+        <Layout><Leaderboard /></Layout>
       </Route>
       <Route path="/hunt/team">
-        <Layout><PrivateRoute component={Team} /></Layout>
+        <Layout><Team /></Layout>
       </Route>
+
+      {/* Badges */}
       <Route path="/badges">
-        <Layout><PrivateRoute component={Badges} /></Layout>
+        <Layout><Badges /></Layout>
       </Route>
-      <Route path="/profile">
-        <Layout><PrivateRoute component={Profile} /></Layout>
-      </Route>
-      
+
       <Route component={NotFound} />
     </Switch>
   );
