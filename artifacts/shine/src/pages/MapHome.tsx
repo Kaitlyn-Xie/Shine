@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Link } from 'wouter'
-import { SearchIcon, PlusIcon, HeartIcon, BookmarkIcon } from '@/components/Icons'
+import { SearchIcon, HeartIcon, BookmarkIcon } from '@/components/Icons'
 
 delete (L.Icon.Default.prototype as any)._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -37,10 +37,13 @@ function makePinIcon(category: string) {
   const color = CATEGORY_COLORS[category] || '#FFC94A'
   return L.divIcon({
     className: '',
-    html: `<div style="width:22px;height:22px;border-radius:50% 50% 50% 4px;background:${color};border:2.5px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.28);transform:rotate(-45deg)"></div>`,
-    iconSize: [22, 22],
-    iconAnchor: [11, 20],
-    popupAnchor: [0, -22],
+    html: `<svg width="28" height="36" viewBox="0 0 28 36" xmlns="http://www.w3.org/2000/svg">
+      <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22s14-12.667 14-22C28 6.268 21.732 0 14 0z" fill="${color}" stroke="white" stroke-width="2"/>
+      <circle cx="14" cy="14" r="5" fill="white" opacity="0.9"/>
+    </svg>`,
+    iconSize: [28, 36],
+    iconAnchor: [14, 36],
+    popupAnchor: [0, -36],
   })
 }
 
@@ -112,8 +115,8 @@ export default function MapHome() {
       {/* Map (always rendered behind) */}
       <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
         <MapContainer
-          center={[42.3755, -71.1160]}
-          zoom={16}
+          center={[42.3740, -71.1170]}
+          zoom={15}
           style={{ height: '100%', width: '100%' }}
           zoomControl={false}
         >
@@ -203,8 +206,8 @@ export default function MapHome() {
             boxShadow: '0 4px 16px rgba(255,154,60,0.45)',
             display: 'flex', alignItems: 'center', gap: 8,
           }}>
-            <PlusIcon size={16} color="#fff" />
-            Sunlight
+            <span style={{ fontSize: 15 }}>☀</span>
+            + Sunlight
           </button>
         </Link>
       </div>

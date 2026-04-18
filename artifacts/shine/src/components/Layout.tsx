@@ -71,7 +71,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           }}>
             <SunIcon size={22} color="#fff" />
           </div>
-          <span style={{ ...labelStyle, color: tabColor(isHome) }}>Home</span>
+          
         </Link>
 
         {/* Profile */}
