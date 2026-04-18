@@ -231,6 +231,27 @@ export const UsersIcon = ({ size = 20, color = 'currentColor' }) => (
   </I>
 )
 
+// 2×2 grid — represents a post feed / gallery
+export const GridIcon = ({ size = 20, color = 'currentColor' }) => (
+  <I size={size} color={color}>
+    <rect x="3"  y="3"  width="7" height="7" rx="1.5" />
+    <rect x="14" y="3"  width="7" height="7" rx="1.5" />
+    <rect x="3"  y="14" width="7" height="7" rx="1.5" />
+    <rect x="14" y="14" width="7" height="7" rx="1.5" />
+  </I>
+)
+
+export const ListIcon = ({ size = 20, color = 'currentColor' }) => (
+  <I size={size} color={color}>
+    <line x1="8" y1="6" x2="21" y2="6" />
+    <line x1="8" y1="12" x2="21" y2="12" />
+    <line x1="8" y1="18" x2="21" y2="18" />
+    <line x1="3" y1="6" x2="3.01" y2="6" strokeWidth="2.5" />
+    <line x1="3" y1="12" x2="3.01" y2="12" strokeWidth="2.5" />
+    <line x1="3" y1="18" x2="3.01" y2="18" strokeWidth="2.5" />
+  </I>
+)
+
 // Avatar component — initials in a colored circle, no flag emojis
 export const Avatar = ({ name = '', size = 40, bg = 'linear-gradient(135deg, #FFC94A, #FF9A3C)', color = '#1A1A1A' }) => {
   const initials = name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()

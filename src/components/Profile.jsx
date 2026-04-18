@@ -1,17 +1,22 @@
-import { ChevronLeftIcon, MessageIcon, PlusIcon, GlobeIcon, UserIcon, MapIcon, SunIcon, Avatar } from './Icons'
+import { useState } from 'react'
+import { ChevronLeftIcon, MessageIcon, PlusIcon, GlobeIcon, UserIcon, EditIcon, Avatar } from './Icons'
+import { CONTENT_ITEMS, TYPE_CONFIG } from '../data'
 
-const POSTS = [
-  { id: 1, bg: 'linear-gradient(160deg, #FFE8A0, #FFC94A)', text: 'First day on campus! So beautiful.', likes: 42 },
-  { id: 2, bg: 'linear-gradient(160deg, #C8F0D8, #5BC88A)', text: 'Found the best coffee spot.', likes: 28 },
-  { id: 3, bg: 'linear-gradient(160deg, #B8D8FF, #5599EE)', text: 'Spring vibes at Harvard Yard.', likes: 67 },
-]
+// Show a small selection of content from the shared data as "my posts"
+const MY_POSTS = CONTENT_ITEMS.filter(item => ['Mei Lin', 'Lucas M.', 'Ji-ho P.', 'Omar K.'].includes(item.username)).slice(0, 4)
 
-export default function Profile({ onBack, mapUnlocked, onToggleMap }) {
+export default function Profile({ onBack }) {
+  const [activeType, setActiveType] = useState('all')
+
+  const displayPosts = activeType === 'all'
+    ? MY_POSTS
+    : MY_POSTS.filter(p => p.type === activeType)
+
   return (
     <div className="fade-in">
       {/* Header */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 12,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 20px 12px', background: '#fff',
         borderBottom: '1px solid var(--border)',
         position: 'sticky', top: 0, zIndex: 50,
@@ -20,6 +25,9 @@ export default function Profile({ onBack, mapUnlocked, onToggleMap }) {
           <ChevronLeftIcon size={22} color="#4A4A4A" />
         </button>
         <span style={{ fontSize: 19, fontWeight: 800 }}>Profile</span>
+        <button style={iconBtn}>
+          <EditIcon size={20} color="#4A4A4A" />
+        </button>
       </div>
 
       {/* Cover + Avatar */}
@@ -79,81 +87,64 @@ export default function Profile({ onBack, mapUnlocked, onToggleMap }) {
         </div>
       </div>
 
-      {/* Campus Arrival Toggle */}
+      {/* Type filter tabs */}
       <div style={{
-        background: '#fff', margin: '0 0 10px',
-        padding: '18px 20px',
-        borderTop: '1px solid var(--border)',
-        borderBottom: '1px solid var(--border)',
+        background: '#fff', padding: '12px 12px 0',
+        borderBottom: '1px solid var(--border)', marginBottom: 10,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{
-              width: 42, height: 42, borderRadius: 12,
-              background: mapUnlocked ? 'linear-gradient(135deg, #FFC94A, #FF9A3C)' : '#F0F0F0',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'background 0.3s',
-            }}>
-              <MapIcon size={20} color={mapUnlocked ? '#fff' : '#9A9A9A'} />
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>Arrived on Campus</div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                {mapUnlocked ? 'Campus map is unlocked' : 'Toggle when you arrive to unlock the map'}
-              </div>
-            </div>
-          </div>
-
-          {/* Toggle switch */}
-          <div
-            onClick={() => onToggleMap(!mapUnlocked)}
-            style={{
-              width: 50, height: 28, borderRadius: 14, cursor: 'pointer',
-              background: mapUnlocked ? 'linear-gradient(135deg, #FFC94A, #FF9A3C)' : '#D0D0D0',
-              position: 'relative', transition: 'background 0.3s',
-              flexShrink: 0,
-            }}>
-            <div style={{
-              position: 'absolute',
-              top: 3, left: mapUnlocked ? 24 : 3,
-              width: 22, height: 22, borderRadius: '50%',
-              background: '#fff',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
-              transition: 'left 0.25s ease',
-            }} />
-          </div>
+        <div style={{ display: 'flex', gap: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
+          {[{ id: 'all', label: 'All Posts' }, { id: 'tip', label: 'Tips' }, { id: 'story', label: 'Stories' }, { id: 'question', label: 'Questions' }].map(t => {
+            const isActive = activeType === t.id
+            return (
+              <button
+                key={t.id}
+                onClick={() => setActiveType(t.id)}
+                style={{
+                  flexShrink: 0, padding: '8px 16px 12px',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 13, fontWeight: isActive ? 700 : 500,
+                  color: isActive ? 'var(--orange)' : 'var(--text-secondary)',
+                  borderBottom: isActive ? '2px solid var(--orange)' : '2px solid transparent',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {t.label}
+              </button>
+            )
+          })}
         </div>
-
-        {mapUnlocked && (
-          <div className="slide-up" style={{
-            marginTop: 14, padding: '10px 14px',
-            background: '#FFFBF0', borderRadius: 10,
-            border: '1.5px solid var(--yellow)',
-            display: 'flex', alignItems: 'center', gap: 8,
-          }}>
-            <SunIcon size={16} color="var(--orange)" />
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--orange)' }}>
-              Welcome to Harvard! The campus map is now available.
-            </span>
-          </div>
-        )}
       </div>
 
-      {/* Recent Posts */}
+      {/* Posts grid */}
       <div style={{ padding: '4px 12px 28px' }}>
-        <div style={{ fontWeight: 800, fontSize: 14, marginBottom: 12, paddingLeft: 2 }}>Recent Posts</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {POSTS.map(post => (
-            <div key={post.id} style={{ background: '#fff', borderRadius: 14, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
-              <div style={{ height: 90, background: post.bg }} />
-              <div style={{ padding: '10px 12px' }}>
-                <p style={{ fontSize: 12, lineHeight: 1.5, marginBottom: 5 }}>{post.text}</p>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <span style={{ color: '#E8415A', fontSize: 11 }}>♥</span> {post.likes}
+          {displayPosts.map(post => {
+            const cfg = TYPE_CONFIG[post.type]
+            return (
+              <div key={post.id} style={{ background: '#fff', borderRadius: 14, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
+                <div style={{ height: 80, background: cfg.light, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{
+                    fontSize: 11, fontWeight: 800, letterSpacing: '0.5px',
+                    color: cfg.color, padding: '3px 8px',
+                    background: '#fff', borderRadius: 10, opacity: 0.9,
+                  }}>
+                    {cfg.label.toUpperCase()}
+                  </span>
+                </div>
+                <div style={{ padding: '10px 12px' }}>
+                  <p style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.4, marginBottom: 5, color: '#1A1A1A' }}>
+                    {post.title}
+                  </p>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ color: '#E8415A' }}>♥</span> {post.likes}
+                    <span style={{ marginLeft: 6, color: '#AAAAAA' }}>· {post.time}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
+
+          {/* New Post card */}
           <div style={{
             background: '#fff', borderRadius: 14, boxShadow: 'var(--shadow)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
