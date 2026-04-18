@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/Shine/"
+title = "Shine (gh-pages live)"
+version = "1.0.0"
+id = "artifacts/shine-live"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/Shine/" ]
+localPort = 18466
+
+[services.development]
+run = "pnpm --filter @workspace/shine-live run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/shine-live", "run", "build" ]
+publicDir = "artifacts/shine-live/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18466"
+BASE_PATH = "/Shine/"
