@@ -41,10 +41,7 @@ const queryClient = new QueryClient({
 function AppRouter() {
   return (
     <Switch>
-      <Route path="/">
-        <Layout><Home /></Layout>
-      </Route>
-      <Route path="/onboarding" component={Onboarding} />
+      <Route path="/" component={Onboarding} />
       
       {/* Protected Routes inside Layout */}
       <Route path="/home">

@@ -25,6 +25,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/profile", label: "Profile", Icon: UserCircleIcon },
   ];
 
+  if (isLoading) {
+    return (
+      <div style={{ minHeight: "100vh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 32, height: 32, border: "3px solid #FFC94A", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+      </div>
+    );
+  }
+
   const navTabStyle = (href: string, locked = false) => {
     const isActive = location === href || location.startsWith(`${href}/`);
     return {
