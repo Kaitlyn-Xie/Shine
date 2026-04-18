@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { SunIcon, SearchIcon, HeartIcon, BookmarkIcon, PlusIcon, CloseIcon, CameraIcon, VideoIcon, PinIcon, Avatar } from '@/components/Icons'
 import { useGetMe } from '@workspace/api-client-react'
 
@@ -207,39 +207,74 @@ function CreatePostSheet({ onClose, onSubmit }: { onClose: () => void; onSubmit:
   )
 }
 
+const FEED_TABS = [
+  { id: 'community', label: 'Community Feed' },
+  { id: 'following', label: 'Following' },
+]
+
 export default function Home() {
   const { data: user } = useGetMe({ query: { retry: false } })
   const [posts, setPosts] = useState<Post[]>(SEED_POSTS)
   const [showCreate, setShowCreate] = useState(false)
+  const [activeTab, setActiveTab] = useState('community')
+  const feedRef = useRef<HTMLDivElement>(null)
 
   const addPost = (post: Post) => {
     setPosts(prev => [post, ...prev])
     setShowCreate(false)
+    setActiveTab('community')
+    feedRef.current?.closest('main')?.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
+  const displayedPosts = activeTab === 'community'
+    ? posts
+    : posts.filter((_, i) => i % 2 === 0)
 
   return (
     <div className="fade-in" style={{ background: 'var(--bg)', minHeight: '100%' }}>
       {/* Header */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 20px 12px',
         background: '#fff',
         borderBottom: '1px solid var(--border)',
         position: 'sticky', top: 0, zIndex: 50,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div className="sun-pulse">
-            <SunIcon size={22} color="#FFC94A" />
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 20px 10px',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className="sun-pulse">
+              <SunIcon size={22} color="#FFC94A" />
+            </div>
+            <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: -0.5 }}>SHINE</span>
           </div>
-          <span style={{ fontSize: 20, fontWeight: 900, letterSpacing: -0.5 }}>SHINE</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <button style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+              <SearchIcon size={20} color="#4A4A4A" />
+            </button>
+            {user && (
+              <Avatar name={user.displayName || 'U'} size={32} />
+            )}
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <button style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-            <SearchIcon size={20} color="#4A4A4A" />
-          </button>
-          {user && (
-            <Avatar name={user.displayName || 'U'} size={32} />
-          )}
+
+        {/* Feed Tabs */}
+        <div style={{ display: 'flex', borderTop: '1px solid var(--border)' }}>
+          {FEED_TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                flex: 1, padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 14, fontWeight: activeTab === tab.id ? 800 : 500,
+                color: activeTab === tab.id ? 'var(--orange)' : 'var(--text-secondary)',
+                borderBottom: activeTab === tab.id ? '2.5px solid var(--orange)' : '2.5px solid transparent',
+                transition: 'all 0.15s',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -260,8 +295,8 @@ export default function Home() {
       )}
 
       {/* Feed */}
-      <div style={{ padding: '14px 16px 80px' }}>
-        {posts.map((post) => (
+      <div ref={feedRef} style={{ padding: '14px 16px 80px' }}>
+        {displayedPosts.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}
       </div>
