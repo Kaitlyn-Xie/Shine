@@ -1,9 +1,6 @@
 modules = ["nodejs-24", "postgresql-16"]
 
 [[artifacts]]
-id = "artifacts/shine"
-
-[[artifacts]]
 id = "artifacts/api-server"
 
 [[artifacts]]
@@ -18,6 +15,7 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
+runButton = "Project"
 
 [agent]
 stack = "PNPM_WORKSPACE"
