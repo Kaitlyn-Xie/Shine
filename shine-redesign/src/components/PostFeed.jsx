@@ -1,4 +1,7 @@
 import { useState, useRef } from 'react'
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import {
   SearchIcon, ChevronDownIcon, ThumbsUpIcon,
   MessageIcon, PinIcon, HeartIcon, Avatar, UserIcon, CloseIcon
@@ -248,6 +251,131 @@ const HARVARD_LOCATIONS = [
   { name: 'Harvard Stadium',                lat: 42.3660,  lng: -71.1265 },
 ]
 
+// ── Location helpers ─────────────────────────────────────────────────────────
+function nearestLocationName(lat, lng) {
+  let best = null, bestDist = Infinity
+  for (const loc of HARVARD_LOCATIONS) {
+    const d = Math.hypot(loc.lat - lat, loc.lng - lng)
+    if (d < bestDist) { bestDist = d; best = loc }
+  }
+  return bestDist < 0.003 ? best.name : 'Custom location'
+}
+
+const pickerIcon = L.divIcon({
+  html: `<div style="
+    width:32px;height:32px;border-radius:50%;
+    background:linear-gradient(135deg,#FFC94A,#FF9A3C);
+    border:3px solid #fff;
+    box-shadow:0 3px 14px rgba(255,154,60,0.6);
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;
+  ">📍</div>`,
+  className: '',
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
+})
+
+function MapTapHandler({ onTap }) {
+  useMapEvents({ click: (e) => onTap([e.latlng.lat, e.latlng.lng]) })
+  return null
+}
+
+function LocationPickerModal({ initialPin, onConfirm, onClose }) {
+  const defaultCenter = [42.3755, -71.1175]
+  const [pin, setPin] = useState(initialPin ?? defaultCenter)
+  const markerRef = useRef(null)
+
+  const handleDragEnd = () => {
+    const latlng = markerRef.current?.getLatLng()
+    if (latlng) setPin([latlng.lat, latlng.lng])
+  }
+
+  const confirm = () => {
+    onConfirm({ lat: pin[0], lng: pin[1], name: nearestLocationName(pin[0], pin[1]) })
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 600,
+      display: 'flex', flexDirection: 'column', background: '#fff',
+    }}>
+      {/* Header */}
+      <div style={{
+        flexShrink: 0, display: 'flex', alignItems: 'center',
+        justifyContent: 'space-between', padding: '14px 16px',
+        borderBottom: '1px solid #F0F0F0',
+        background: '#fff',
+      }}>
+        <button
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#4A4A4A', padding: '6px 4px', display: 'flex', alignItems: 'center', gap: 4 }}
+        >
+          ← Back
+        </button>
+        <span style={{ fontSize: 16, fontWeight: 800 }}>Tag a Location</span>
+        <button
+          onClick={confirm}
+          style={{
+            background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)', border: 'none',
+            borderRadius: 20, padding: '7px 16px', fontSize: 13, fontWeight: 800,
+            color: '#fff', cursor: 'pointer', boxShadow: '0 2px 8px rgba(255,154,60,0.4)',
+          }}
+        >
+          Confirm
+        </button>
+      </div>
+
+      {/* Location label */}
+      <div style={{
+        flexShrink: 0, padding: '10px 16px', background: '#FFFBF0',
+        borderBottom: '1px solid #FFE5C0',
+        display: 'flex', alignItems: 'center', gap: 8,
+      }}>
+        <span style={{ fontSize: 14 }}>📍</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#7A4600' }}>
+          {nearestLocationName(pin[0], pin[1])}
+        </span>
+        <span style={{ fontSize: 11, color: '#AAAAAA', marginLeft: 'auto' }}>
+          {pin[0].toFixed(4)}, {pin[1].toFixed(4)}
+        </span>
+      </div>
+
+      {/* Map */}
+      <div style={{ flex: 1, position: 'relative' }}>
+        <MapContainer
+          center={defaultCenter}
+          zoom={15}
+          style={{ width: '100%', height: '100%' }}
+          zoomControl={false}
+        >
+          <TileLayer
+            attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <MapTapHandler onTap={setPin} />
+          <Marker
+            position={pin}
+            icon={pickerIcon}
+            draggable
+            ref={markerRef}
+            eventHandlers={{ dragend: handleDragEnd }}
+          />
+        </MapContainer>
+
+        {/* Hint pill */}
+        <div style={{
+          position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
+          background: 'rgba(26,26,26,0.72)', backdropFilter: 'blur(4px)',
+          borderRadius: 20, padding: '7px 16px', pointerEvents: 'none',
+          color: '#fff', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+        }}>
+          Tap the map or drag the pin to place it
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Sub-view: Community Feed ──────────────────────────────────────────────────
 
 function FeedView({ userPosts = [], onNewPost, user = {} }) {
@@ -418,7 +546,8 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
   const [textContent, setTextContent] = useState('')
   const [gradientIdx, setGradientIdx] = useState(0)
   const [caption, setCaption] = useState('')
-  const [location, setLocation] = useState('')
+  const [pinData, setPinData] = useState(null)   // { lat, lng, name } | null
+  const [showMapPicker, setShowMapPicker] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const fileRef = useRef(null)
 
@@ -437,7 +566,6 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
   const handleSubmit = () => {
     if (!canSubmit || submitting) return
     setSubmitting(true)
-    const loc = HARVARD_LOCATIONS.find(l => l.name === location) ?? null
     const post = {
       id: Date.now(),
       username: user.name ?? 'You',
@@ -450,12 +578,21 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
       imgH: 140,
       textContent: mode === 'textcard' ? textContent.trim() : null,
       gradientIdx,
-      location: loc,
+      location: pinData,
     }
     onSubmit(post)
   }
 
   return (
+    <>
+    {/* Map picker — rendered as sibling so z-index stacking works correctly */}
+    {showMapPicker && (
+      <LocationPickerModal
+        initialPin={pinData ? [pinData.lat, pinData.lng] : null}
+        onClose={() => setShowMapPicker(false)}
+        onConfirm={(data) => { setPinData(data); setShowMapPicker(false) }}
+      />
+    )}
     <div
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }}
       onClick={e => e.target === e.currentTarget && onClose()}
@@ -587,22 +724,34 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
               <span style={{ fontSize: 13, fontWeight: 700, color: '#4A4A4A' }}>Tag a location</span>
               <span style={{ fontSize: 11, color: '#AAAAAA', fontWeight: 400 }}>(shows on map)</span>
             </div>
-            <select
-              value={location}
-              onChange={e => setLocation(e.target.value)}
+            <button
+              onClick={() => setShowMapPicker(true)}
               style={{
-                width: '100%', padding: '11px 14px', border: '1.5px solid var(--border)', borderRadius: 12,
-                fontSize: 14, outline: 'none', fontFamily: 'inherit', background: '#fff',
-                color: location ? '#1A1A1A' : '#AAAAAA', cursor: 'pointer',
-                boxSizing: 'border-box',
-                appearance: 'none', WebkitAppearance: 'none',
+                width: '100%', padding: '12px 14px', border: `1.5px solid ${pinData ? 'var(--orange)' : 'var(--border)'}`,
+                borderRadius: 12, fontSize: 14, fontFamily: 'inherit', background: pinData ? '#FFFBF0' : '#fff',
+                cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
+                boxSizing: 'border-box', color: pinData ? '#7A4600' : '#AAAAAA',
               }}
             >
-              <option value="">No location</option>
-              {HARVARD_LOCATIONS.map(l => (
-                <option key={l.name} value={l.name}>{l.name}</option>
-              ))}
-            </select>
+              <span style={{ fontSize: 16, flexShrink: 0 }}>{pinData ? '📍' : '🗺️'}</span>
+              <span style={{ flex: 1, fontWeight: pinData ? 600 : 400 }}>
+                {pinData ? pinData.name : 'Tap to place a pin on the map…'}
+              </span>
+              {pinData
+                ? (
+                  <span
+                    onClick={e => { e.stopPropagation(); setPinData(null) }}
+                    style={{ fontSize: 12, color: '#AAAAAA', flexShrink: 0, padding: '2px 6px', cursor: 'pointer' }}
+                  >✕</span>
+                )
+                : <span style={{ fontSize: 12, color: '#AAAAAA', flexShrink: 0 }}>›</span>
+              }
+            </button>
+            {pinData && (
+              <div style={{ marginTop: 4, fontSize: 11, color: '#AAAAAA', paddingLeft: 4 }}>
+                {pinData.lat.toFixed(5)}, {pinData.lng.toFixed(5)}
+              </div>
+            )}
           </div>
 
           {/* Submit */}
@@ -624,6 +773,7 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
         </div>
       </div>
     </div>
+    </>
   )
 }
 
