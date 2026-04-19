@@ -295,82 +295,87 @@ function LocationPickerModal({ initialPin, onConfirm, onClose }) {
   }
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 600,
-      display: 'flex', flexDirection: 'column', background: '#fff',
-    }}>
-      {/* Header */}
+    <div style={{ position: 'fixed', inset: 0, zIndex: 600 }}>
+      {/* Map fills the full screen */}
+      <MapContainer
+        center={defaultCenter}
+        zoom={15}
+        style={{ width: '100%', height: '100%' }}
+        zoomControl={false}
+      >
+        <TileLayer
+          attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <MapTapHandler onTap={setPin} />
+        <Marker
+          position={pin}
+          icon={pickerIcon}
+          draggable
+          ref={markerRef}
+          eventHandlers={{ dragend: handleDragEnd }}
+        />
+      </MapContainer>
+
+      {/* ── Top bar (absolute over map) ── */}
       <div style={{
-        flexShrink: 0, display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', padding: '14px 16px',
-        borderBottom: '1px solid #F0F0F0',
-        background: '#fff',
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '14px 16px',
+        background: 'rgba(255,255,255,0.96)',
+        backdropFilter: 'blur(8px)',
+        boxShadow: '0 2px 12px rgba(0,0,0,0.10)',
       }}>
         <button
           onClick={onClose}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#4A4A4A', padding: '6px 4px', display: 'flex', alignItems: 'center', gap: 4 }}
+          style={{
+            background: '#F0F0F0', border: 'none', borderRadius: 20,
+            padding: '8px 14px', fontSize: 13, fontWeight: 700,
+            color: '#4A4A4A', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 4,
+          }}
         >
           ← Back
         </button>
-        <span style={{ fontSize: 16, fontWeight: 800 }}>Tag a Location</span>
+        <span style={{ fontSize: 15, fontWeight: 800, color: '#1A1A1A' }}>Tag a Location</span>
         <button
           onClick={confirm}
           style={{
             background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)', border: 'none',
-            borderRadius: 20, padding: '7px 16px', fontSize: 13, fontWeight: 800,
-            color: '#fff', cursor: 'pointer', boxShadow: '0 2px 8px rgba(255,154,60,0.4)',
+            borderRadius: 20, padding: '8px 16px', fontSize: 13, fontWeight: 800,
+            color: '#fff', cursor: 'pointer', boxShadow: '0 2px 8px rgba(255,154,60,0.45)',
           }}
         >
-          Confirm
+          Confirm ✓
         </button>
       </div>
 
-      {/* Location label */}
+      {/* ── Current location label (absolute, below top bar) ── */}
       <div style={{
-        flexShrink: 0, padding: '10px 16px', background: '#FFFBF0',
-        borderBottom: '1px solid #FFE5C0',
+        position: 'absolute', top: 64, left: 12, right: 12, zIndex: 10,
+        background: 'rgba(255,251,240,0.95)', backdropFilter: 'blur(6px)',
+        borderRadius: 12, padding: '9px 14px',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.10)',
         display: 'flex', alignItems: 'center', gap: 8,
       }}>
         <span style={{ fontSize: 14 }}>📍</span>
-        <span style={{ fontSize: 13, fontWeight: 600, color: '#7A4600' }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#7A4600', flex: 1 }}>
           {nearestLocationName(pin[0], pin[1])}
         </span>
-        <span style={{ fontSize: 11, color: '#AAAAAA', marginLeft: 'auto' }}>
+        <span style={{ fontSize: 10, color: '#AAAAAA' }}>
           {pin[0].toFixed(4)}, {pin[1].toFixed(4)}
         </span>
       </div>
 
-      {/* Map */}
-      <div style={{ flex: 1, position: 'relative' }}>
-        <MapContainer
-          center={defaultCenter}
-          zoom={15}
-          style={{ width: '100%', height: '100%' }}
-          zoomControl={false}
-        >
-          <TileLayer
-            attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <MapTapHandler onTap={setPin} />
-          <Marker
-            position={pin}
-            icon={pickerIcon}
-            draggable
-            ref={markerRef}
-            eventHandlers={{ dragend: handleDragEnd }}
-          />
-        </MapContainer>
-
-        {/* Hint pill */}
-        <div style={{
-          position: 'absolute', bottom: 20, left: '50%', transform: 'translateX(-50%)',
-          background: 'rgba(26,26,26,0.72)', backdropFilter: 'blur(4px)',
-          borderRadius: 20, padding: '7px 16px', pointerEvents: 'none',
-          color: '#fff', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-        }}>
-          Tap the map or drag the pin to place it
-        </div>
+      {/* ── Hint pill (absolute, bottom) ── */}
+      <div style={{
+        position: 'absolute', bottom: 36, left: '50%', transform: 'translateX(-50%)',
+        zIndex: 10, pointerEvents: 'none',
+        background: 'rgba(26,26,26,0.75)', backdropFilter: 'blur(4px)',
+        borderRadius: 20, padding: '8px 18px',
+        color: '#fff', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
+      }}>
+        Tap the map or drag the pin to place it
       </div>
     </div>
   )
