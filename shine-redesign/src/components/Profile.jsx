@@ -54,6 +54,11 @@ export default function Profile({ user = {}, onBack, onSignOut }) {
               <GlobeIcon size={13} color="var(--text-secondary)" />
               {[user.country, user.year ? `Class of ${user.year}` : '', user.house].filter(Boolean).join(' · ')}
             </div>
+            {user.concentration && (
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, paddingLeft: 18 }}>
+                📚 {user.concentration}
+              </div>
+            )}
             {interestTags.length > 0 && (
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 {interestTags.map(tag => (

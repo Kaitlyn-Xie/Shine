@@ -1,6 +1,60 @@
 import { useState } from 'react'
 import { SunIcon } from './Icons'
 
+const CONCENTRATIONS = [
+  'African and African American Studies',
+  'Anthropology',
+  'Applied Mathematics',
+  'Art, Film, and Visual Studies',
+  'Astrophysics',
+  'Biomedical Engineering',
+  'Chemical and Physical Biology',
+  'Chemistry',
+  'Chemistry and Physics',
+  'Classical Studies',
+  'Classics',
+  'Comparative Literature',
+  'Comparative Study of Religion',
+  'Computer Science',
+  'Earth and Planetary Sciences',
+  'East Asian Studies',
+  'Economics',
+  'Electrical Engineering',
+  'Engineering Sciences',
+  'English',
+  'Environmental Science and Public Policy',
+  'Folklore and Mythology',
+  'Germanic Languages and Literatures',
+  'Government',
+  'History',
+  'History and Literature',
+  'History and Science',
+  'History of Art and Architecture',
+  'Human Developmental and Regenerative Biology',
+  'Human Evolutionary Biology',
+  'Integrative Biology',
+  'Linguistics',
+  'Mathematics',
+  'Mechanical Engineering',
+  'Medieval Studies',
+  'Molecular and Cellular Biology',
+  'Music',
+  'Near Eastern Languages and Civilizations',
+  'Neuroscience',
+  'Philosophy',
+  'Physics',
+  'Psychology',
+  'Romance Languages and Literatures',
+  'Slavic Languages and Literatures',
+  'Sociology',
+  'South Asian Studies',
+  'Special Concentrations',
+  'Statistics',
+  'Theater, Dance, and Media',
+  'Women, Gender, and Sexuality',
+  'Undecided / Exploring',
+]
+
 const HOUSES = [
   'Harvard Yard (Freshman)', 'Adams House', 'Cabot House', 'Currier House',
   'Dunster House', 'Eliot House', 'Kirkland House', 'Leverett House',
@@ -18,11 +72,12 @@ const INTERESTS = [
 ]
 
 const STEPS = [
-  { id: 'name',      title: 'What should we call you?',       subtitle: "This is how you'll appear to other students." },
-  { id: 'country',   title: 'Where are you from?',            subtitle: 'Help others connect with students from your home.' },
-  { id: 'year',      title: 'What class year are you?',       subtitle: 'Find others who arrived when you did.' },
-  { id: 'house',     title: 'Where are you living?',          subtitle: 'Connect with neighbors on campus.' },
-  { id: 'interests', title: "What are you into?",             subtitle: 'Pick as many as you like.' },
+  { id: 'name',          title: 'What should we call you?',       subtitle: "This is how you'll appear to other students." },
+  { id: 'country',       title: 'Where are you from?',            subtitle: 'Help others connect with students from your home.' },
+  { id: 'year',          title: 'What class year are you?',       subtitle: 'Find others who arrived when you did.' },
+  { id: 'concentration', title: "What's your concentration?",     subtitle: "Don't worry — you can always change your mind!" },
+  { id: 'house',         title: 'Where are you living?',          subtitle: 'Connect with neighbors on campus.' },
+  { id: 'interests',     title: "What are you into?",             subtitle: 'Pick as many as you like.' },
 ]
 
 export default function Onboarding({ user, onComplete }) {
@@ -30,6 +85,7 @@ export default function Onboarding({ user, onComplete }) {
   const [name, setName] = useState(user.name || '')
   const [country, setCountry] = useState('')
   const [year, setYear] = useState('')
+  const [concentration, setConcentration] = useState('')
   const [house, setHouse] = useState('')
   const [interests, setInterests] = useState([])
   const [done, setDone] = useState(false)
@@ -42,6 +98,7 @@ export default function Onboarding({ user, onComplete }) {
     if (current.id === 'name') return name.trim().length > 0
     if (current.id === 'country') return country.trim().length > 0
     if (current.id === 'year') return !!year
+    if (current.id === 'concentration') return !!concentration
     if (current.id === 'house') return !!house
     if (current.id === 'interests') return interests.length > 0
     return true
@@ -56,7 +113,7 @@ export default function Onboarding({ user, onComplete }) {
   const handleNext = () => {
     if (!canAdvance()) return
     if (isLast) {
-      const profile = { ...user, name, country, year, house, interests, onboarded: true }
+      const profile = { ...user, name, country, year, concentration, house, interests, onboarded: true }
       localStorage.setItem('shine_user', JSON.stringify(profile))
       setDone(true)
       setTimeout(() => onComplete(profile), 1800)
@@ -167,6 +224,38 @@ export default function Onboarding({ user, onComplete }) {
                 Class of {y}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* ── Step: Concentration ── */}
+        {current.id === 'concentration' && (
+          <div style={{ position: 'relative' }}>
+            <select
+              value={concentration}
+              onChange={e => setConcentration(e.target.value)}
+              style={{
+                width: '100%', padding: '16px 44px 16px 18px',
+                border: `2px solid ${concentration ? '#FF9A3C' : 'var(--border)'}`,
+                borderRadius: 16, fontSize: 16, color: concentration ? 'var(--text)' : '#AAAAAA',
+                background: '#fff', outline: 'none', fontFamily: 'inherit',
+                boxSizing: 'border-box', cursor: 'pointer',
+                appearance: 'none', WebkitAppearance: 'none',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+              }}
+            >
+              <option value="" disabled>Select your concentration…</option>
+              {CONCENTRATIONS.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <svg
+              style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+              width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke={concentration ? '#FF9A3C' : '#AAAAAA'} strokeWidth="2.5"
+              strokeLinecap="round" strokeLinejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
           </div>
         )}
 
