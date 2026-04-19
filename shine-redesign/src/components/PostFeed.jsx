@@ -138,7 +138,7 @@ function CommunityQView({ onShowFAQ }) {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A' }}>Common Questions</div>
-              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>FAQs for international students</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>FAQs & resources for international students</div>
             </div>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF9A3C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="9 18 15 12 9 6" />
