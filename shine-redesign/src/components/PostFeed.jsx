@@ -283,6 +283,7 @@ function MapTapHandler({ onTap }) {
 function InlineMapPicker({ initialPin, onConfirm, onCancel }) {
   const defaultCenter = [42.3755, -71.1175]
   const [pin, setPin] = useState(initialPin ?? defaultCenter)
+  const [locationName, setLocationName] = useState('')
   const markerRef = useRef(null)
 
   const handleDragEnd = () => {
@@ -315,20 +316,24 @@ function InlineMapPicker({ initialPin, onConfirm, onCancel }) {
         </MapContainer>
       </div>
 
-      {/* Location name + action buttons — rendered BELOW the map, outside it entirely */}
+      {/* Controls below the map */}
       <div style={{ background: '#FFFBF0', padding: '12px 14px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-          <span style={{ fontSize: 14 }}>📍</span>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#7A4600', flex: 1 }}>
-            {nearestLocationName(pin[0], pin[1])}
-          </span>
-          <span style={{ fontSize: 10, color: '#AAAAAA' }}>
-            {pin[0].toFixed(4)}, {pin[1].toFixed(4)}
-          </span>
-        </div>
-        <div style={{ fontSize: 11, color: '#AAAAAA', marginBottom: 12, textAlign: 'center' }}>
+        <div style={{ fontSize: 11, color: '#AAAAAA', marginBottom: 10, textAlign: 'center' }}>
           Tap the map or drag the pin to your exact spot
         </div>
+
+        {/* Name input */}
+        <input
+          value={locationName}
+          onChange={e => setLocationName(e.target.value)}
+          placeholder="Name this location (e.g. Widener Library)…"
+          style={{
+            width: '100%', padding: '10px 12px', border: '1.5px solid var(--border)',
+            borderRadius: 10, fontSize: 13, fontFamily: 'inherit', outline: 'none',
+            background: '#fff', marginBottom: 10, boxSizing: 'border-box',
+          }}
+        />
+
         <div style={{ display: 'flex', gap: 8 }}>
           <button
             onClick={onCancel}
@@ -340,7 +345,7 @@ function InlineMapPicker({ initialPin, onConfirm, onCancel }) {
             Cancel
           </button>
           <button
-            onClick={() => onConfirm({ lat: pin[0], lng: pin[1], name: nearestLocationName(pin[0], pin[1]) })}
+            onClick={() => onConfirm({ lat: pin[0], lng: pin[1], name: locationName.trim() || 'My location' })}
             style={{
               flex: 2, padding: '10px 0', border: 'none', borderRadius: 12,
               background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
