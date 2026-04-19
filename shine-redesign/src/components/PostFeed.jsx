@@ -460,36 +460,46 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div className="slide-up" style={{ background: '#fff', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 430, maxHeight: '92vh', overflowY: 'auto', paddingBottom: 40 }}>
-        {/* Handle + header */}
-        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 4 }}>
-          <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 16px' }}>
-          <span style={{ fontSize: 17, fontWeight: 800 }}>Create Post</span>
-          <button onClick={onClose} style={iconBtn}><CloseIcon size={20} color="#4A4A4A" /></button>
+      <div
+        className="slide-up"
+        style={{
+          background: '#fff', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 430,
+          height: '88vh', display: 'flex', flexDirection: 'column',
+        }}
+      >
+        {/* ── Fixed header (non-scrolling) ── */}
+        <div style={{ flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 4 }}>
+            <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 14px' }}>
+            <span style={{ fontSize: 17, fontWeight: 800 }}>Create Post</span>
+            <button onClick={onClose} style={iconBtn}><CloseIcon size={20} color="#4A4A4A" /></button>
+          </div>
+
+          {/* Mode toggle */}
+          <div style={{ display: 'flex', margin: '0 20px 16px', background: 'var(--bg)', borderRadius: 12, padding: 4 }}>
+            {[['photo', '📷  Photo'], ['textcard', '✍️  Text Card']].map(([m, label]) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                style={{
+                  flex: 1, padding: '9px 0', border: 'none', borderRadius: 9, cursor: 'pointer',
+                  background: mode === m ? '#fff' : 'transparent',
+                  fontWeight: mode === m ? 800 : 500,
+                  fontSize: 13,
+                  color: mode === m ? 'var(--orange)' : 'var(--text-secondary)',
+                  boxShadow: mode === m ? '0 1px 6px rgba(0,0,0,0.10)' : 'none',
+                  transition: 'all 0.15s',
+                }}
+              >{label}</button>
+            ))}
+          </div>
         </div>
 
-        {/* Mode toggle */}
-        <div style={{ display: 'flex', margin: '0 20px 20px', background: 'var(--bg)', borderRadius: 12, padding: 4 }}>
-          {[['photo', '📷  Photo'], ['textcard', '✍️  Text Card']].map(([m, label]) => (
-            <button
-              key={m}
-              onClick={() => setMode(m)}
-              style={{
-                flex: 1, padding: '9px 0', border: 'none', borderRadius: 9, cursor: 'pointer',
-                background: mode === m ? '#fff' : 'transparent',
-                fontWeight: mode === m ? 800 : 500,
-                fontSize: 13,
-                color: mode === m ? 'var(--orange)' : 'var(--text-secondary)',
-                boxShadow: mode === m ? '0 1px 6px rgba(0,0,0,0.10)' : 'none',
-                transition: 'all 0.15s',
-              }}
-            >{label}</button>
-          ))}
-        </div>
-
-        <div style={{ padding: '0 20px' }}>
+        {/* ── Scrollable content area ── */}
+        <div style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '0 20px', paddingBottom: 'calc(20px + env(safe-area-inset-bottom, 0px))' }}>
+        <div style={{ paddingBottom: 32 }}>
 
           {/* ── Photo mode ── */}
           {mode === 'photo' && (
@@ -610,6 +620,7 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
           >
             {submitting ? 'Posting…' : 'Share Post'}
           </button>
+        </div>
         </div>
       </div>
     </div>
