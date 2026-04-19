@@ -280,7 +280,7 @@ function MapTapHandler({ onTap }) {
   return null
 }
 
-function LocationPickerModal({ initialPin, onConfirm, onClose }) {
+function InlineMapPicker({ initialPin, onConfirm, onCancel }) {
   const defaultCenter = [42.3755, -71.1175]
   const [pin, setPin] = useState(initialPin ?? defaultCenter)
   const markerRef = useRef(null)
@@ -290,92 +290,67 @@ function LocationPickerModal({ initialPin, onConfirm, onClose }) {
     if (latlng) setPin([latlng.lat, latlng.lng])
   }
 
-  const confirm = () => {
-    onConfirm({ lat: pin[0], lng: pin[1], name: nearestLocationName(pin[0], pin[1]) })
-  }
-
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 600 }}>
-      {/* Map fills the full screen */}
-      <MapContainer
-        center={defaultCenter}
-        zoom={15}
-        style={{ width: '100%', height: '100%' }}
-        zoomControl={false}
-      >
-        <TileLayer
-          attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <MapTapHandler onTap={setPin} />
-        <Marker
-          position={pin}
-          icon={pickerIcon}
-          draggable
-          ref={markerRef}
-          eventHandlers={{ dragend: handleDragEnd }}
-        />
-      </MapContainer>
-
-      {/* ── Top bar (absolute over map) ── */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 16px',
-        background: 'rgba(255,255,255,0.96)',
-        backdropFilter: 'blur(8px)',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.10)',
-      }}>
-        <button
-          onClick={onClose}
-          style={{
-            background: '#F0F0F0', border: 'none', borderRadius: 20,
-            padding: '8px 14px', fontSize: 13, fontWeight: 700,
-            color: '#4A4A4A', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: 4,
-          }}
+    <div style={{ borderRadius: 14, overflow: 'hidden', border: '1.5px solid var(--border)', marginBottom: 12 }}>
+      {/* Map — fixed pixel height so Leaflet renders correctly */}
+      <div style={{ position: 'relative', height: 220 }}>
+        <MapContainer
+          center={defaultCenter}
+          zoom={15}
+          style={{ width: '100%', height: '100%' }}
+          zoomControl={false}
         >
-          ← Back
-        </button>
-        <span style={{ fontSize: 15, fontWeight: 800, color: '#1A1A1A' }}>Tag a Location</span>
-        <button
-          onClick={confirm}
-          style={{
-            background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)', border: 'none',
-            borderRadius: 20, padding: '8px 16px', fontSize: 13, fontWeight: 800,
-            color: '#fff', cursor: 'pointer', boxShadow: '0 2px 8px rgba(255,154,60,0.45)',
-          }}
-        >
-          Confirm ✓
-        </button>
+          <TileLayer
+            attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <MapTapHandler onTap={setPin} />
+          <Marker
+            position={pin}
+            icon={pickerIcon}
+            draggable
+            ref={markerRef}
+            eventHandlers={{ dragend: handleDragEnd }}
+          />
+        </MapContainer>
       </div>
 
-      {/* ── Current location label (absolute, below top bar) ── */}
-      <div style={{
-        position: 'absolute', top: 64, left: 12, right: 12, zIndex: 1000,
-        background: 'rgba(255,251,240,0.95)', backdropFilter: 'blur(6px)',
-        borderRadius: 12, padding: '9px 14px',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.10)',
-        display: 'flex', alignItems: 'center', gap: 8,
-      }}>
-        <span style={{ fontSize: 14 }}>📍</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#7A4600', flex: 1 }}>
-          {nearestLocationName(pin[0], pin[1])}
-        </span>
-        <span style={{ fontSize: 10, color: '#AAAAAA' }}>
-          {pin[0].toFixed(4)}, {pin[1].toFixed(4)}
-        </span>
-      </div>
-
-      {/* ── Hint pill (absolute, bottom) ── */}
-      <div style={{
-        position: 'absolute', bottom: 36, left: '50%', transform: 'translateX(-50%)',
-        zIndex: 1000, pointerEvents: 'none',
-        background: 'rgba(26,26,26,0.75)', backdropFilter: 'blur(4px)',
-        borderRadius: 20, padding: '8px 18px',
-        color: '#fff', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
-      }}>
-        Tap the map or drag the pin to place it
+      {/* Location name + action buttons — rendered BELOW the map, outside it entirely */}
+      <div style={{ background: '#FFFBF0', padding: '12px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+          <span style={{ fontSize: 14 }}>📍</span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: '#7A4600', flex: 1 }}>
+            {nearestLocationName(pin[0], pin[1])}
+          </span>
+          <span style={{ fontSize: 10, color: '#AAAAAA' }}>
+            {pin[0].toFixed(4)}, {pin[1].toFixed(4)}
+          </span>
+        </div>
+        <div style={{ fontSize: 11, color: '#AAAAAA', marginBottom: 12, textAlign: 'center' }}>
+          Tap the map or drag the pin to your exact spot
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1, padding: '10px 0', border: '1.5px solid var(--border)', borderRadius: 12,
+              background: '#fff', fontSize: 13, fontWeight: 700, color: '#4A4A4A', cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onConfirm({ lat: pin[0], lng: pin[1], name: nearestLocationName(pin[0], pin[1]) })}
+            style={{
+              flex: 2, padding: '10px 0', border: 'none', borderRadius: 12,
+              background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
+              fontSize: 13, fontWeight: 800, color: '#fff', cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(255,154,60,0.35)',
+            }}
+          >
+            Use this location ✓
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -552,7 +527,7 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
   const [gradientIdx, setGradientIdx] = useState(0)
   const [caption, setCaption] = useState('')
   const [pinData, setPinData] = useState(null)   // { lat, lng, name } | null
-  const [showMapPicker, setShowMapPicker] = useState(false)
+  const [showInlineMap, setShowInlineMap] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const fileRef = useRef(null)
 
@@ -589,15 +564,6 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
   }
 
   return (
-    <>
-    {/* Map picker — rendered as sibling so z-index stacking works correctly */}
-    {showMapPicker && (
-      <LocationPickerModal
-        initialPin={pinData ? [pinData.lat, pinData.lng] : null}
-        onClose={() => setShowMapPicker(false)}
-        onConfirm={(data) => { setPinData(data); setShowMapPicker(false) }}
-      />
-    )}
     <div
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }}
       onClick={e => e.target === e.currentTarget && onClose()}
@@ -729,33 +695,38 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
               <span style={{ fontSize: 13, fontWeight: 700, color: '#4A4A4A' }}>Tag a location</span>
               <span style={{ fontSize: 11, color: '#AAAAAA', fontWeight: 400 }}>(shows on map)</span>
             </div>
-            <button
-              onClick={() => setShowMapPicker(true)}
-              style={{
-                width: '100%', padding: '12px 14px', border: `1.5px solid ${pinData ? 'var(--orange)' : 'var(--border)'}`,
-                borderRadius: 12, fontSize: 14, fontFamily: 'inherit', background: pinData ? '#FFFBF0' : '#fff',
-                cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
-                boxSizing: 'border-box', color: pinData ? '#7A4600' : '#AAAAAA',
-              }}
-            >
-              <span style={{ fontSize: 16, flexShrink: 0 }}>{pinData ? '📍' : '🗺️'}</span>
-              <span style={{ flex: 1, fontWeight: pinData ? 600 : 400 }}>
-                {pinData ? pinData.name : 'Tap to place a pin on the map…'}
-              </span>
-              {pinData
-                ? (
-                  <span
-                    onClick={e => { e.stopPropagation(); setPinData(null) }}
-                    style={{ fontSize: 12, color: '#AAAAAA', flexShrink: 0, padding: '2px 6px', cursor: 'pointer' }}
-                  >✕</span>
-                )
-                : <span style={{ fontSize: 12, color: '#AAAAAA', flexShrink: 0 }}>›</span>
-              }
-            </button>
-            {pinData && (
-              <div style={{ marginTop: 4, fontSize: 11, color: '#AAAAAA', paddingLeft: 4 }}>
-                {pinData.lat.toFixed(5)}, {pinData.lng.toFixed(5)}
-              </div>
+
+            {/* Inline map picker */}
+            {showInlineMap && (
+              <InlineMapPicker
+                initialPin={pinData ? [pinData.lat, pinData.lng] : null}
+                onCancel={() => setShowInlineMap(false)}
+                onConfirm={(data) => { setPinData(data); setShowInlineMap(false) }}
+              />
+            )}
+
+            {/* Show "pick" button when map is not open */}
+            {!showInlineMap && (
+              <button
+                onClick={() => setShowInlineMap(true)}
+                style={{
+                  width: '100%', padding: '12px 14px',
+                  border: `1.5px solid ${pinData ? 'var(--orange)' : 'var(--border)'}`,
+                  borderRadius: 12, fontSize: 14, fontFamily: 'inherit',
+                  background: pinData ? '#FFFBF0' : '#fff',
+                  cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10,
+                  boxSizing: 'border-box', color: pinData ? '#7A4600' : '#AAAAAA',
+                }}
+              >
+                <span style={{ fontSize: 16, flexShrink: 0 }}>{pinData ? '📍' : '🗺️'}</span>
+                <span style={{ flex: 1, fontWeight: pinData ? 600 : 400 }}>
+                  {pinData ? pinData.name : 'Tap to place a pin on the map…'}
+                </span>
+                {pinData
+                  ? <span onClick={e => { e.stopPropagation(); setPinData(null) }} style={{ fontSize: 12, color: '#AAAAAA', flexShrink: 0, padding: '2px 6px', cursor: 'pointer' }}>✕</span>
+                  : <span style={{ fontSize: 12, color: '#AAAAAA', flexShrink: 0 }}>›</span>
+                }
+              </button>
             )}
           </div>
 
@@ -778,7 +749,6 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
         </div>
       </div>
     </div>
-    </>
   )
 }
 
