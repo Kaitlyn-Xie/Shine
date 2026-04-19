@@ -16,7 +16,7 @@ const POST_OPTIONS = [
 
 export default function App() {
   const [tab, setTab] = useState('map')
-  const [postView, setPostView] = useState('faq')   // active post sub-page
+  const [postView, setPostView] = useState('feed')  // active post sub-page
   const [showPostMenu, setShowPostMenu] = useState(false)
   const [showProfile, setShowProfile] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
