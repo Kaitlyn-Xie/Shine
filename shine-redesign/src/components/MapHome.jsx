@@ -31,6 +31,26 @@ function createPinIcon(type, selected = false) {
   })
 }
 
+function createStoryPinIcon(post, selected = false) {
+  const s = selected ? 52 : 44
+  const border = selected ? 3 : 2
+  const emoji = post.mediaType === 'textcard' ? '✍️' : '📷'
+  return L.divIcon({
+    html: `<div style="
+      width:${s}px;height:${s}px;border-radius:50%;
+      background:linear-gradient(135deg,#FFC94A,#FF9A3C);
+      border:${border}px solid #fff;
+      box-shadow:0 3px 14px rgba(255,154,60,0.55);
+      display:flex;align-items:center;justify-content:center;
+      font-size:${selected ? 22 : 18}px;
+      transition:all 0.2s;
+    ">${emoji}</div>`,
+    className: '',
+    iconSize: [s, s],
+    iconAnchor: [s / 2, s / 2],
+  })
+}
+
 function MapClickHandler({ onMapClick }) {
   useMapEvents({ click: onMapClick })
   return null
@@ -57,11 +77,14 @@ function useBlockMapEvents(ref) {
   }, [ref])
 }
 
-export default function MapHome({ onSunlight }) {
+export default function MapHome({ onSunlight, communityPosts = [] }) {
   const [filter, setFilter] = useState('all')
   const [selected, setSelected] = useState(null)
+  const [selectedStory, setSelectedStory] = useState(null)
   const [listView, setListView] = useState(false)
   const [search, setSearch] = useState('')
+
+  const storyPosts = communityPosts.filter(p => p.location)
 
   const searchRef = useRef(null)
   const filterRef = useRef(null)
@@ -99,13 +122,28 @@ export default function MapHome({ onSunlight }) {
           attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapClickHandler onMapClick={() => setSelected(null)} />
+        <MapClickHandler onMapClick={() => { setSelected(null); setSelectedStory(null) }} />
         {filtered.map(item => (
           <Marker
             key={item.id}
             position={[item.location.lat, item.location.lng]}
             icon={createPinIcon(item.type, selected?.id === item.id)}
             eventHandlers={{ click: (e) => handlePinClick(item, e) }}
+          />
+        ))}
+        {storyPosts.map(post => (
+          <Marker
+            key={`story-${post.id}`}
+            position={[post.location.lat, post.location.lng]}
+            icon={createStoryPinIcon(post, selectedStory?.id === post.id)}
+            eventHandlers={{
+              click: (e) => {
+                e.originalEvent.stopPropagation()
+                setSelectedStory(post)
+                setSelected(null)
+                setListView(false)
+              }
+            }}
           />
         ))}
       </MapContainer>
@@ -226,6 +264,11 @@ export default function MapHome({ onSunlight }) {
       {/* ── Pin detail bottom sheet ── */}
       {selected && !listView && (
         <PinBottomSheet item={selected} onClose={() => setSelected(null)} />
+      )}
+
+      {/* ── Story (community post) bottom sheet ── */}
+      {selectedStory && !listView && (
+        <StoryBottomSheet post={selectedStory} onClose={() => setSelectedStory(null)} />
       )}
 
       {/* ── List view panel ── */}
@@ -383,6 +426,87 @@ function ListPanel({ items, onSelect, onClose }) {
             </button>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+// ── Story (community post) bottom sheet ──────────────────────────────────────
+function StoryBottomSheet({ post, onClose }) {
+  const [liked, setLiked] = useState(false)
+  const [localLikes, setLocalLikes] = useState(0)
+  const toggleLike = () => {
+    setLiked(v => !v)
+    setLocalLikes(n => n + (liked ? -1 : 1))
+  }
+
+  return (
+    <div className="slide-up" style={{
+      position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000,
+      background: '#fff', borderRadius: '20px 20px 0 0',
+      boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+      maxHeight: '68vh', overflowY: 'auto',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px' }}>
+        <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
+      </div>
+
+      {/* Story pin label */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{
+            fontSize: 11, fontWeight: 800, letterSpacing: '0.5px',
+            padding: '4px 10px', borderRadius: 20,
+            background: '#FFF3E0', color: '#FF9A3C',
+          }}>STORY</span>
+          {post.location && (
+            <span style={{ fontSize: 12, color: '#9A9A9A', fontWeight: 500 }}>📍 {post.location.name}</span>
+          )}
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+          <CloseIcon size={18} color="#9A9A9A" />
+        </button>
+      </div>
+
+      {/* Media */}
+      {post.mediaType === 'photo' && post.img && (
+        <img src={post.img} alt="" style={{ width: '100%', maxHeight: 240, objectFit: 'cover', display: 'block' }} />
+      )}
+      {post.mediaType === 'textcard' && post.textContent && (
+        <div style={{
+          margin: '0 16px',
+          borderRadius: 16, padding: '20px 18px',
+          background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          minHeight: 100,
+        }}>
+          <p style={{ color: '#fff', fontWeight: 700, fontSize: 16, lineHeight: 1.5, textAlign: 'center', margin: 0, textShadow: '0 1px 4px rgba(0,0,0,0.2)' }}>
+            {post.textContent}
+          </p>
+        </div>
+      )}
+
+      {/* Caption + footer */}
+      <div style={{ padding: '14px 16px 28px' }}>
+        <p style={{ fontSize: 14, color: '#2A2A2A', lineHeight: 1.65, marginBottom: 14 }}>{post.text}</p>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F0F0F0', paddingTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: '50%', background: post.avatarBg ?? '#FFC94A',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800,
+            }}>
+              {(post.username ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>{post.username}</div>
+              <div style={{ fontSize: 11, color: '#9A9A9A' }}>{post.time ?? 'just now'}</div>
+            </div>
+          </div>
+          <button onClick={toggleLike} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <HeartIcon size={18} color={liked ? '#E8415A' : '#BBBBBB'} filled={liked} />
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#7A7A7A' }}>{(post.likes ?? 0) + localLikes}</span>
+          </button>
+        </div>
       </div>
     </div>
   )

@@ -54,13 +54,17 @@ export default function App() {
 
   const isMap = !showProfile && tab === 'map'
 
+  const [communityPosts, setCommunityPosts] = useState([])
+
+  const handleNewPost = (post) => setCommunityPosts(prev => [post, ...prev])
+
   const renderScreen = () => {
     if (showProfile) return <Profile user={user} onBack={() => setShowProfile(false)} onSignOut={() => { localStorage.removeItem('shine_user'); setUser(null); setShowProfile(false) }} />
     switch (tab) {
-      case 'map':  return <MapHome onSunlight={() => setShowCreate(true)} />
-      case 'post': return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} />
+      case 'map':  return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} />
+      case 'post': return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} user={user} />
       case 'chat': return <Chat />
-      default:     return <MapHome />
+      default:     return <MapHome communityPosts={communityPosts} />
     }
   }
 

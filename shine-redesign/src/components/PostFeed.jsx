@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import {
   SearchIcon, ChevronDownIcon, ThumbsUpIcon,
   MessageIcon, PinIcon, HeartIcon, Avatar, UserIcon, CloseIcon
@@ -32,12 +32,12 @@ const INIT_POSTS = [
 
 // ── Root ─────────────────────────────────────────────────────────────────────
 
-export default function PostFeed({ view = 'feed', onShowFAQ }) {
+export default function PostFeed({ view = 'feed', onShowFAQ, userPosts = [], onNewPost, user = {} }) {
   return (
     <div className="fade-in">
       {view === 'faq'  && <FAQView />}
       {view === 'cq'   && <CommunityQView onShowFAQ={onShowFAQ} />}
-      {view === 'feed' && <FeedView />}
+      {view === 'feed' && <FeedView userPosts={userPosts} onNewPost={onNewPost} user={user} />}
     </div>
   )
 }
@@ -225,20 +225,50 @@ function CommunityQView({ onShowFAQ }) {
   )
 }
 
+// ── Harvard locations for tagging ────────────────────────────────────────────
+const HARVARD_LOCATIONS = [
+  { name: 'Harvard Yard',                   lat: 42.3770,  lng: -71.1167 },
+  { name: 'Widener Library',                lat: 42.3768,  lng: -71.1165 },
+  { name: 'Science Center',                 lat: 42.3783,  lng: -71.1163 },
+  { name: 'Smith Campus Center',            lat: 42.3750,  lng: -71.1190 },
+  { name: 'Memorial Church',                lat: 42.3773,  lng: -71.1161 },
+  { name: 'Annenberg Hall',                 lat: 42.3772,  lng: -71.1162 },
+  { name: 'Harvard Square',                 lat: 42.3732,  lng: -71.1201 },
+  { name: 'Charles River',                  lat: 42.3685,  lng: -71.1244 },
+  { name: 'Lamont Library',                 lat: 42.3765,  lng: -71.1168 },
+  { name: 'Harvard Museum of Natural History', lat: 42.3787, lng: -71.1155 },
+  { name: 'Adams House',                    lat: 42.3740,  lng: -71.1178 },
+  { name: 'Quincy House',                   lat: 42.3729,  lng: -71.1192 },
+  { name: 'Winthrop House',                 lat: 42.3724,  lng: -71.1198 },
+  { name: 'Eliot House',                    lat: 42.3721,  lng: -71.1224 },
+  { name: 'Kirkland House',                 lat: 42.3714,  lng: -71.1218 },
+  { name: 'Dunster House',                  lat: 42.3701,  lng: -71.1215 },
+  { name: 'Mather House',                   lat: 42.3682,  lng: -71.1205 },
+  { name: 'Cabot House',                    lat: 42.3847,  lng: -71.1183 },
+  { name: 'Harvard Stadium',                lat: 42.3660,  lng: -71.1265 },
+]
+
 // ── Sub-view: Community Feed ──────────────────────────────────────────────────
 
-function FeedView({ onCreatePost }) {
+function FeedView({ userPosts = [], onNewPost, user = {} }) {
   const [liked, setLiked] = useState(new Set())
-  const [posts, setPosts] = useState(INIT_POSTS)
+  const [localLikes, setLocalLikes] = useState({})
   const [search, setSearch] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
+
+  const allPosts = [...userPosts, ...INIT_POSTS]
 
   const toggleLike = (id) => {
-    const wasLiked = liked.has(id)
-    setLiked(prev => { const s = new Set(prev); wasLiked ? s.delete(id) : s.add(id); return s })
-    setPosts(prev => prev.map(p => p.id === id ? { ...p, likes: p.likes + (wasLiked ? -1 : 1) } : p))
+    setLiked(prev => {
+      const s = new Set(prev)
+      const wasLiked = s.has(id)
+      wasLiked ? s.delete(id) : s.add(id)
+      setLocalLikes(lk => ({ ...lk, [id]: (lk[id] ?? 0) + (wasLiked ? -1 : 1) }))
+      return s
+    })
   }
 
-  const filtered = posts.filter(p =>
+  const filtered = allPosts.filter(p =>
     !search || p.text.toLowerCase().includes(search.toLowerCase()) || p.username.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -247,12 +277,21 @@ function FeedView({ onCreatePost }) {
 
   return (
     <>
-      {/* Header — search icon replaced by +Post button */}
+      {/* Header */}
       <PageHeader
         title="Community Feed"
         icon={<HeartIcon size={18} color="var(--orange)" />}
-        action={<button style={smallBtn}>+ Post</button>}
+        action={<button style={smallBtn} onClick={() => setShowCreate(true)}>+ Post</button>}
       />
+
+      {/* Create post sheet */}
+      {showCreate && (
+        <CreatePostSheet
+          user={user}
+          onClose={() => setShowCreate(false)}
+          onSubmit={(post) => { onNewPost && onNewPost(post); setShowCreate(false) }}
+        />
+      )}
 
       {/* Search bar */}
       <SearchBar
@@ -269,10 +308,10 @@ function FeedView({ onCreatePost }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '12px 10px 100px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {left.map((p, i)  => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07} />)}
+          {left.map((p, i)  => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07} extraLikes={localLikes[p.id] ?? 0} />)}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 28 }}>
-          {right.map((p, i) => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07 + 0.04} />)}
+          {right.map((p, i) => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07 + 0.04} extraLikes={localLikes[p.id] ?? 0} />)}
         </div>
       </div>
     </>
@@ -325,18 +364,251 @@ function SearchBar({ value, onChange, placeholder = 'Search…' }) {
   )
 }
 
-function PostCard({ post, liked, onLike, delay }) {
+function PostCard({ post, liked, onLike, delay, extraLikes = 0 }) {
+  const displayLikes = (post.likes ?? 0) + extraLikes
   return (
     <div className="fade-in" style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', animationDelay: `${delay}s` }}>
-      <img src={post.img} alt="" style={{ width: '100%', height: post.imgH, objectFit: 'cover', display: 'block', background: '#F0F0F0' }} loading="lazy" />
+      {/* Media area */}
+      {post.mediaType === 'textcard' ? (
+        <div style={{
+          width: '100%', minHeight: 100, padding: '14px 10px',
+          background: 'linear-gradient(135deg, #FFC94A22, #FF9A3C33)',
+          borderBottom: '1px solid #FFE5C0',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#7A4600', textAlign: 'center', lineHeight: 1.5, margin: 0 }}>
+            {post.textContent}
+          </p>
+        </div>
+      ) : post.img ? (
+        <img src={post.img} alt="" style={{ width: '100%', height: post.imgH ?? 140, objectFit: 'cover', display: 'block', background: '#F0F0F0' }} loading="lazy" />
+      ) : null}
       <div style={{ padding: '9px 10px 10px' }}>
+        {post.location && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginBottom: 5 }}>
+            <span style={{ fontSize: 10, color: 'var(--orange)', fontWeight: 600 }}>📍 {post.location.name}</span>
+          </div>
+        )}
         <p style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text)', marginBottom: 8 }}>{post.text}</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <Avatar name={post.username} size={20} bg={post.avatarBg} />
           <span style={{ fontSize: 11, color: 'var(--text-secondary)', flex: 1, fontWeight: 500 }}>{post.username}</span>
           <button onClick={() => onLike(post.id)} style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             <HeartIcon size={14} color={liked ? '#E8415A' : '#BBBBBB'} filled={liked} />
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{post.likes}</span>
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{displayLikes}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Create Post Sheet ─────────────────────────────────────────────────────────
+const TEXT_CARD_GRADIENTS = [
+  'linear-gradient(135deg, #FFC94A, #FF9A3C)',
+  'linear-gradient(135deg, #8EC5FC, #E0C3FC)',
+  'linear-gradient(135deg, #a1c4fd, #c2e9fb)',
+  'linear-gradient(135deg, #f6d365, #fda085)',
+  'linear-gradient(135deg, #84fab0, #8fd3f4)',
+]
+
+function CreatePostSheet({ user, onClose, onSubmit }) {
+  const [mode, setMode] = useState('photo') // 'photo' | 'textcard'
+  const [photoPreview, setPhotoPreview] = useState(null)
+  const [textContent, setTextContent] = useState('')
+  const [gradientIdx, setGradientIdx] = useState(0)
+  const [caption, setCaption] = useState('')
+  const [location, setLocation] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const fileRef = useRef(null)
+
+  const canSubmit = mode === 'photo'
+    ? photoPreview && caption.trim()
+    : textContent.trim() && caption.trim()
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onloadend = () => setPhotoPreview(reader.result)
+    reader.readAsDataURL(file)
+  }
+
+  const handleSubmit = () => {
+    if (!canSubmit || submitting) return
+    setSubmitting(true)
+    const loc = HARVARD_LOCATIONS.find(l => l.name === location) ?? null
+    const post = {
+      id: Date.now(),
+      username: user.name ?? 'You',
+      avatarBg: '#FFC94A',
+      text: caption.trim(),
+      likes: 0,
+      time: 'just now',
+      mediaType: mode,
+      img: mode === 'photo' ? photoPreview : null,
+      imgH: 140,
+      textContent: mode === 'textcard' ? textContent.trim() : null,
+      gradientIdx,
+      location: loc,
+    }
+    onSubmit(post)
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 400 }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="slide-up" style={{ background: '#fff', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 430, maxHeight: '92vh', overflowY: 'auto', paddingBottom: 40 }}>
+        {/* Handle + header */}
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 12, paddingBottom: 4 }}>
+          <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 16px' }}>
+          <span style={{ fontSize: 17, fontWeight: 800 }}>Create Post</span>
+          <button onClick={onClose} style={iconBtn}><CloseIcon size={20} color="#4A4A4A" /></button>
+        </div>
+
+        {/* Mode toggle */}
+        <div style={{ display: 'flex', margin: '0 20px 20px', background: 'var(--bg)', borderRadius: 12, padding: 4 }}>
+          {[['photo', '📷  Photo'], ['textcard', '✍️  Text Card']].map(([m, label]) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              style={{
+                flex: 1, padding: '9px 0', border: 'none', borderRadius: 9, cursor: 'pointer',
+                background: mode === m ? '#fff' : 'transparent',
+                fontWeight: mode === m ? 800 : 500,
+                fontSize: 13,
+                color: mode === m ? 'var(--orange)' : 'var(--text-secondary)',
+                boxShadow: mode === m ? '0 1px 6px rgba(0,0,0,0.10)' : 'none',
+                transition: 'all 0.15s',
+              }}
+            >{label}</button>
+          ))}
+        </div>
+
+        <div style={{ padding: '0 20px' }}>
+
+          {/* ── Photo mode ── */}
+          {mode === 'photo' && (
+            <div
+              onClick={() => fileRef.current?.click()}
+              style={{
+                width: '100%', minHeight: 180, borderRadius: 16, marginBottom: 16,
+                background: photoPreview ? 'transparent' : '#F5F5F5',
+                border: photoPreview ? 'none' : '2px dashed #E0E0E0',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', overflow: 'hidden', position: 'relative',
+              }}
+            >
+              {photoPreview
+                ? <img src={photoPreview} alt="preview" style={{ width: '100%', maxHeight: 260, objectFit: 'cover', display: 'block', borderRadius: 14 }} />
+                : (
+                  <div style={{ textAlign: 'center', color: '#AAAAAA' }}>
+                    <div style={{ fontSize: 36, marginBottom: 8 }}>📷</div>
+                    <div style={{ fontSize: 13, fontWeight: 600 }}>Tap to select photo</div>
+                    <div style={{ fontSize: 11, marginTop: 4 }}>or take one with your camera</div>
+                  </div>
+                )
+              }
+              {photoPreview && (
+                <button
+                  onClick={e => { e.stopPropagation(); setPhotoPreview(null) }}
+                  style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <CloseIcon size={14} color="#fff" />
+                </button>
+              )}
+            </div>
+          )}
+          <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display: 'none' }} onChange={handleFile} />
+
+          {/* ── Text card mode ── */}
+          {mode === 'textcard' && (
+            <div style={{ marginBottom: 16 }}>
+              {/* Gradient preview */}
+              <div style={{
+                borderRadius: 16, minHeight: 120, padding: 20, marginBottom: 10,
+                background: TEXT_CARD_GRADIENTS[gradientIdx],
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <p style={{ color: '#fff', fontWeight: 700, fontSize: 15, lineHeight: 1.5, textAlign: 'center', margin: 0, textShadow: '0 1px 4px rgba(0,0,0,0.2)' }}>
+                  {textContent || 'Your text will appear here…'}
+                </p>
+              </div>
+              {/* Gradient picker */}
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 14 }}>
+                {TEXT_CARD_GRADIENTS.map((g, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setGradientIdx(i)}
+                    style={{
+                      width: 26, height: 26, borderRadius: '50%', background: g, border: 'none', cursor: 'pointer',
+                      boxShadow: gradientIdx === i ? '0 0 0 3px var(--orange)' : '0 1px 4px rgba(0,0,0,0.2)',
+                    }}
+                  />
+                ))}
+              </div>
+              <textarea
+                value={textContent}
+                onChange={e => setTextContent(e.target.value)}
+                placeholder="Write something inspiring…"
+                maxLength={200}
+                style={{ width: '100%', minHeight: 80, padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 14, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit', resize: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+          )}
+
+          {/* Caption */}
+          <textarea
+            value={caption}
+            onChange={e => setCaption(e.target.value)}
+            placeholder="Add a caption…"
+            maxLength={300}
+            style={{ width: '100%', minHeight: 72, padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 14, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit', resize: 'none', marginBottom: 14, boxSizing: 'border-box' }}
+          />
+
+          {/* Location picker */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <span style={{ fontSize: 15 }}>📍</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#4A4A4A' }}>Tag a location</span>
+              <span style={{ fontSize: 11, color: '#AAAAAA', fontWeight: 400 }}>(shows on map)</span>
+            </div>
+            <select
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              style={{
+                width: '100%', padding: '11px 14px', border: '1.5px solid var(--border)', borderRadius: 12,
+                fontSize: 14, outline: 'none', fontFamily: 'inherit', background: '#fff',
+                color: location ? '#1A1A1A' : '#AAAAAA', cursor: 'pointer',
+                boxSizing: 'border-box',
+                appearance: 'none', WebkitAppearance: 'none',
+              }}
+            >
+              <option value="">No location</option>
+              {HARVARD_LOCATIONS.map(l => (
+                <option key={l.name} value={l.name}>{l.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Submit */}
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit || submitting}
+            style={{
+              width: '100%', padding: 15, border: 'none', borderRadius: 16,
+              background: canSubmit ? 'linear-gradient(135deg, #FFC94A, #FF9A3C)' : '#F0F0F0',
+              color: canSubmit ? '#fff' : '#AAAAAA',
+              fontSize: 15, fontWeight: 800, cursor: canSubmit ? 'pointer' : 'default',
+              boxShadow: canSubmit ? '0 4px 16px rgba(255,154,60,0.4)' : 'none',
+              transition: 'all 0.2s',
+            }}
+          >
+            {submitting ? 'Posting…' : 'Share Post'}
           </button>
         </div>
       </div>
