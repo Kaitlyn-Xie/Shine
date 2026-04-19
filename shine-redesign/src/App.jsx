@@ -5,11 +5,10 @@ import PostFeed from './components/PostFeed'
 import Chat from './components/Chat'
 import Profile from './components/Profile'
 import CreateContent from './components/CreateContent'
-import { PinIcon, MessageIcon, HeartIcon } from './components/Icons'
+import { MessageIcon, HeartIcon } from './components/Icons'
 
 // ── Post sub-menu options ────────────────────────────────────────────────────
 const POST_OPTIONS = [
-  { id: 'faq',  Icon: PinIcon,     label: 'Common Questions',   desc: 'FAQs for international students', color: '#FF9A3C' },
   { id: 'cq',   Icon: MessageIcon, label: 'Community Questions', desc: 'Ask & answer the community',      color: '#5599EE' },
   { id: 'feed', Icon: HeartIcon,   label: 'Community Feed',      desc: 'Photos & stories from students',  color: '#3CB87A' },
 ]
@@ -43,7 +42,7 @@ export default function App() {
     if (showProfile) return <Profile onBack={() => setShowProfile(false)} />
     switch (tab) {
       case 'map':  return <MapHome onSunlight={() => setShowCreate(true)} />
-      case 'post': return <PostFeed view={postView} />
+      case 'post': return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} />
       case 'chat': return <Chat />
       default:     return <MapHome />
     }

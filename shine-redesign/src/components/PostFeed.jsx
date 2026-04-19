@@ -32,11 +32,11 @@ const INIT_POSTS = [
 
 // ── Root ─────────────────────────────────────────────────────────────────────
 
-export default function PostFeed({ view = 'faq' }) {
+export default function PostFeed({ view = 'feed', onShowFAQ }) {
   return (
     <div className="fade-in">
       {view === 'faq'  && <FAQView />}
-      {view === 'cq'   && <CommunityQView />}
+      {view === 'cq'   && <CommunityQView onShowFAQ={onShowFAQ} />}
       {view === 'feed' && <FeedView />}
     </div>
   )
@@ -90,7 +90,7 @@ function FAQView() {
 
 // ── Sub-view: Community Questions ────────────────────────────────────────────
 
-function CommunityQView() {
+function CommunityQView({ onShowFAQ }) {
   const [questions, setQuestions] = useState(INIT_COMMUNITY_QS)
   const [search, setSearch] = useState('')
   const [showAsk, setShowAsk] = useState(false)
@@ -117,6 +117,35 @@ function CommunityQView() {
         icon={<MessageIcon size={18} color="var(--orange)" />}
         action={<button onClick={() => setShowAsk(true)} style={smallBtn}>+ Ask</button>}
       />
+
+      {/* Common Questions shortcut */}
+      {onShowFAQ && (
+        <div style={{ padding: '10px 12px 0' }}>
+          <button
+            onClick={onShowFAQ}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+              background: 'linear-gradient(135deg, #FFF8ED, #FFF0D4)',
+              border: '1.5px solid #FFE0A0', borderRadius: 14,
+              padding: '12px 16px', cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <div style={{
+              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+              background: '#FF9A3C22', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <PinIcon size={18} color="#FF9A3C" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A' }}>Common Questions</div>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>FAQs for international students</div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF9A3C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        </div>
+      )}
 
       {/* Search bar */}
       <SearchBar
