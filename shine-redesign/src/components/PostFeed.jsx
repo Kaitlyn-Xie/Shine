@@ -319,7 +319,7 @@ function LocationPickerModal({ initialPin, onConfirm, onClose }) {
 
       {/* ── Top bar (absolute over map) ── */}
       <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
+        position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1000,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '14px 16px',
         background: 'rgba(255,255,255,0.96)',
@@ -352,7 +352,7 @@ function LocationPickerModal({ initialPin, onConfirm, onClose }) {
 
       {/* ── Current location label (absolute, below top bar) ── */}
       <div style={{
-        position: 'absolute', top: 64, left: 12, right: 12, zIndex: 10,
+        position: 'absolute', top: 64, left: 12, right: 12, zIndex: 1000,
         background: 'rgba(255,251,240,0.95)', backdropFilter: 'blur(6px)',
         borderRadius: 12, padding: '9px 14px',
         boxShadow: '0 2px 10px rgba(0,0,0,0.10)',
@@ -370,7 +370,7 @@ function LocationPickerModal({ initialPin, onConfirm, onClose }) {
       {/* ── Hint pill (absolute, bottom) ── */}
       <div style={{
         position: 'absolute', bottom: 36, left: '50%', transform: 'translateX(-50%)',
-        zIndex: 10, pointerEvents: 'none',
+        zIndex: 1000, pointerEvents: 'none',
         background: 'rgba(26,26,26,0.75)', backdropFilter: 'blur(4px)',
         borderRadius: 20, padding: '8px 18px',
         color: '#fff', fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap',
