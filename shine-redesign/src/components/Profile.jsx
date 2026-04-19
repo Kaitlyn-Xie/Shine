@@ -1,12 +1,16 @@
 import { useState } from 'react'
-import { ChevronLeftIcon, MessageIcon, PlusIcon, GlobeIcon, UserIcon, EditIcon, Avatar } from './Icons'
+import { ChevronLeftIcon, MessageIcon, PlusIcon, GlobeIcon } from './Icons'
 import { CONTENT_ITEMS, TYPE_CONFIG } from '../data'
 
 // Show a small selection of content from the shared data as "my posts"
 const MY_POSTS = CONTENT_ITEMS.filter(item => ['Mei Lin', 'Lucas M.', 'Ji-ho P.', 'Omar K.'].includes(item.username)).slice(0, 4)
 
-export default function Profile({ onBack }) {
+export default function Profile({ user = {}, onBack, onSignOut }) {
   const [activeType, setActiveType] = useState('all')
+
+  const displayName = user.name || 'Your Name'
+  const initials = displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+  const interestTags = (user.interests || []).slice(0, 5)
 
   const displayPosts = activeType === 'all'
     ? MY_POSTS
@@ -25,8 +29,8 @@ export default function Profile({ onBack }) {
           <ChevronLeftIcon size={22} color="#4A4A4A" />
         </button>
         <span style={{ fontSize: 19, fontWeight: 800 }}>Profile</span>
-        <button style={iconBtn}>
-          <EditIcon size={20} color="#4A4A4A" />
+        <button onClick={onSignOut} style={{ ...iconBtn, fontSize: 12, color: '#AAAAAA', fontWeight: 600 }}>
+          Sign Out
         </button>
       </div>
 
@@ -41,25 +45,27 @@ export default function Profile({ onBack }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'var(--shadow)',
           }}>
-            <UserIcon size={34} color="#B86A00" />
+            <span style={{ fontWeight: 900, fontSize: 24, color: '#B86A00' }}>{initials}</span>
           </div>
 
           <div style={{ marginTop: 12 }}>
-            <div style={{ fontWeight: 900, fontSize: 20 }}>Your Name</div>
+            <div style={{ fontWeight: 900, fontSize: 20 }}>{displayName}</div>
             <div style={{ fontSize: 14, color: 'var(--text-secondary)', marginTop: 3, display: 'flex', alignItems: 'center', gap: 5 }}>
               <GlobeIcon size={13} color="var(--text-secondary)" />
-              Your Country · Class of 2028
+              {[user.country, user.year ? `Class of ${user.year}` : '', user.house].filter(Boolean).join(' · ')}
             </div>
-            <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-              {['Computer Science', 'International Student', 'Coffee'].map(tag => (
-                <span key={tag} style={{
-                  fontSize: 12, padding: '5px 12px',
-                  background: '#FFFBF0', borderRadius: 20,
-                  border: '1.5px solid var(--yellow)',
-                  fontWeight: 600, color: 'var(--orange)',
-                }}>{tag}</span>
-              ))}
-            </div>
+            {interestTags.length > 0 && (
+              <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                {interestTags.map(tag => (
+                  <span key={tag} style={{
+                    fontSize: 12, padding: '5px 12px',
+                    background: '#FFFBF0', borderRadius: 20,
+                    border: '1.5px solid var(--yellow)',
+                    fontWeight: 600, color: 'var(--orange)',
+                  }}>{tag}</span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Stats */}
@@ -82,7 +88,7 @@ export default function Profile({ onBack }) {
             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
             boxShadow: '0 4px 14px rgba(255,154,60,0.3)',
           }}>
-            <MessageIcon size={17} color="#1A1A1A" /> Message
+            <MessageIcon size={17} color="#1A1A1A" /> Edit Profile
           </button>
         </div>
       </div>
