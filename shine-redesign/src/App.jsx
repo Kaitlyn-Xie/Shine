@@ -98,7 +98,9 @@ export default function App() {
       })
       setCommunityPosts(prev => prev.map(p => p.id === post.id ? { ...saved, id: saved.id } : p))
     } catch (e) {
-      console.error('Failed to save post:', e)
+      console.error('Failed to save post:', e.message || e)
+      setCommunityPosts(prev => prev.filter(p => p.id !== post.id))
+      alert('Could not save your post — please check your connection and try again.')
     }
   }
 
@@ -126,7 +128,9 @@ export default function App() {
       })
       setSunlightPosts(prev => prev.map(p => p.id === postWithUser.id ? saved : p))
     } catch (e) {
-      console.error('Failed to save sunlight post:', e)
+      console.error('Failed to save sunlight post:', e.message || e)
+      setSunlightPosts(prev => prev.filter(p => p.id !== postWithUser.id))
+      alert('Could not save your post — please check your connection and try again.')
     }
   }
 
