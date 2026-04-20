@@ -5,6 +5,7 @@ import PostFeed from './components/PostFeed'
 import Chat from './components/Chat'
 import Profile from './components/Profile'
 import CreateContent from './components/CreateContent'
+import ScavengerHunt from './components/ScavengerHunt'
 import Login from './components/Login'
 import Onboarding from './components/Onboarding'
 import { MessageIcon, HeartIcon } from './components/Icons'
@@ -72,6 +73,7 @@ export default function App() {
       case 'post':    return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} />
       case 'chat':    return <Chat />
       case 'profile': return <Profile user={user} onUpdate={handleUpdateUser} userPosts={communityPosts} userSunlightPosts={sunlightPosts} onSignOut={() => { localStorage.removeItem('shine_user'); setUser(null); setTab('map') }} />
+      case 'hunt':    return <ScavengerHunt user={user} />
       default:        return <MapHome communityPosts={communityPosts} />
     }
   }
@@ -123,7 +125,7 @@ export default function App() {
         </>
       )}
 
-      <BottomNav active={tab} onChange={handleTabChange} />
+      <BottomNav active={tab} onChange={handleTabChange} isOnCampus={!!user?.isOnCampus} />
 
       {showCreate && (
         <CreateContent

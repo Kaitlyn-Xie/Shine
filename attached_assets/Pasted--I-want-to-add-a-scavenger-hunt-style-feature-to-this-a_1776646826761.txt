@@ -1,0 +1,401 @@
+
+I want to add a scavenger-hunt style feature to this app used by new international students at Harvard College. Add a Scavenger Hunt icon (a trophy) tab to the navigation bar that is greyed out and once users toggle to "I am on campus" on their profile. The "Scavenger Hunt" feature will ungrey on the navigation bar. You are the most competent software engineer. Please help me design data models, endpoints, and UI flows for this feature, and then outline a clean implementation plan. Here are some ideas but edit and change as needed to fit into our current app with current features (such as allowing posts to be in our already existing community feed page and using the map as it makes sense for this feature to be smoothly integrated into the existing app):
+
+**Core goals**
+
+- Students complete *missions* on or near campus to:
+  - Discover locations & resources
+  - Meet people
+  - Practice using services and navigating campus life
+- They:
+  - Check in via **GPS** (geolocation)
+  - Scan a **QR code** or tap an **NFC tag** for some missions
+  - Upload a **photo** and optionally share it to a public **photo feed**
+- There are **individual** and **group** leaderboards.
+
+**Core mechanics**
+
+1. **Missions**
+   - Missions have:
+     - `id`, `title`, `description`
+     - `type` (Location/Resource/Social/Academic/Life/Event)
+     - `difficulty` (Easy/Medium/Hard → 10/15/20 base points)
+     - `isEvergreen` (boolean)
+     - Optional `startTime`, `endTime` (for limited-time missions)
+     - Optional `geofence` (lat, lng, radius)
+     - Flags: `requiresGPS`, `requiresPhoto`, `requiresQRorNFC`, `allowTextAnswer`
+   - Some missions are **meta/badge missions** that are auto-awarded when other missions are completed (e.g., complete 3 resource missions → “Resource Master”).
+
+2. **Verification**
+   - GPS: user must be inside mission’s geofence to complete.
+   - QR/NFC: we’ll have a string code embedded in a QR or NFC tag which the app scans/reads and sends to the backend to verify.
+   - Photo: user uploads at least one image; they can tick “Share to public feed”.
+   - Optional text answer fields per mission.
+   - A mission is “completed” when all required pieces are valid:
+     - Geolocation (if required)
+     - QR/NFC code match (if required)
+     - Photo present (if required)
+
+3. **Scoring**
+   - Base points per mission:
+     - Easy: 10
+     - Medium: 15
+     - Hard: 20
+   - Per-submission bonuses:
+     - **Group size** (based on number of tagged participants in the submission):
+       - 1 person: +0
+       - 2–3 people: +3
+       - 4–6 people: +5 (cap at 6)
+     - **Nationality diversity** (if we store each user’s country):
+       - 1–2 countries represented: +0
+       - 3+ countries: +3
+     - **Photo feed share**:
+       - If `shareToFeed == true`: +2 points
+     - **Limited-time bonus**:
+       - If mission has `startTime/endTime` and user completes within that window: +5
+   - **Badges/achievements** (auto-awarded once):
+     - “Resource Master”: +20 points when user completes any 3 resource-type missions.
+     - “Global Connector”: +20 points when user completes 3 social/cross-cultural missions with at least 3 countries represented each time.
+     - “Campus Explorer”: +20 points when user completes 5 location-based missions.
+
+   - **Daily cap (optional)**:
+     - First 5 mission completions per user per day get full base points.
+     - Subsequent completions that day get 50% of base points (bonuses still apply or can also be reduced).
+
+   - Each mission can be completed **once per user** (configurable if we want some to be repeatable).
+
+4. **Leaderboards**
+   - **Individual leaderboard**:
+     - Show top users by total score over a given time range (e.g., orientation, all-time).
+   - **Group leaderboard**:
+     - Users belong to a `groupId` (for now, think House or user-created teams).
+     - Group score = sum of **top N members**’ scores (configurable, e.g., top 10 per group).
+     - Also support an alternate mode where group score is the **average** of member scores.
+
+5. **Photo feed**
+   - A simple chronological/social feed:
+     - Each public entry includes:
+       - Photo(s)
+       - Mission title
+       - User name and group
+       - Timestamp
+       - Location (maybe just mission name, not exact coordinates)
+     - Ability to like/favorite (optional).
+   - On mission completion flow, users tick a box “Share this photo to feed” which stores the photo + metadata in a `PublicFeedPosts` table.
+
+6. **Entities / tables (suggest a normalized schema)**
+   - `Users`:
+     - `id`, `name`, `email`, `country`, `groupId`, etc.
+   - `Groups`:
+     - `id`, `name`, `type` (House/custom), etc.
+   - `Missions`:
+     - As listed above.
+   - `MissionCompletions`:
+     - `id`, `missionId`, `userId`, `timestamp`
+     - `pointsAwarded`, `basePoints`, `bonusPointsBreakdown` (JSON)
+     - `locationLat`, `locationLng`
+     - `qrOrNfcCodeUsed`
+     - `textAnswer` (optional)
+   - `MissionParticipants` (for tagging multiple users in a single submission):
+     - `completionId`, `userId`
+   - `Badges`:
+     - `id`, `name`, `description`, `points`, `criteriaType` (resource_count, social_count, etc.)
+   - `UserBadges`:
+     - `userId`, `badgeId`, `awardedAt`
+   - `Photos`:
+     - `id`, `completionId`, `url`, `isPublic`
+   - `PublicFeedPosts`:
+     - `id`, `photoId`, `missionId`, `userId`, `createdAt`
+   - Optional: `Likes`, `Comments` if we want social interaction.
+
+7. **API & flows**
+   - Please propose:
+     - REST or GraphQL endpoints for:
+       - Listing missions (with filters for available/evergreen, time-limited, completed vs not)
+       - Submitting a mission completion (upload photos, location, QR/NFC code, tagged participants, shareToFeed flag)
+       - Fetching user score, badges, and history
+       - Leaderboard queries (individual and group)
+       - Fetching the public photo feed (with pagination)
+     - Logic on the backend to:
+       - Validate GPS vs geofence
+       - Validate QR/NFC code for the given mission
+       - Compute points (base + bonuses + badges + daily cap)
+       - Recalculate leaderboards efficiently (e.g., using cached aggregates or background jobs)
+
+8. **Implementation preferences**
+   - Please:
+     - Suggest a backend stack and structure (e.g., Node + Express + Postgres, or Django, etc.).
+     - Show example code snippets for:
+       - Mission completion endpoint (with scoring)
+       - Geofence check
+       - Awarding badges after a completion
+     - Suggest how to integrate QR/NFC scanning on mobile (front-end) and how the backend will validate codes.
+     - Consider security/privacy:
+       - No precise GPS coordinates in public feed (use only mission name/area).
+       - Only show photos where users set `isPublic` or `shareToFeed == true`.
+
+9. Here are more details to help with content:
+
+## 1. Concrete mission list (Harvard College – International Students)
+
+I’ll mark each mission with:
+
+- **Type**: Location / Resource / Social / Academic / Life
+- **Timing**: O (Orientation-only / time-limited) or E (Evergreen, can do anytime)
+- **Verification**:
+  - GPS = geotag in area
+  - QR/NFC = scan or tap
+  - Photo = upload (with option “Share to photo feed”)
+
+You can assign points using the algorithm below (e.g., Easy = 10, Medium = 15, Hard = 20).
+
+---
+
+### A. Campus landmarks & orientation
+
+1. **Widener Welcome**
+   - Type: Location | Timing: E
+   - Mission: “Find Widener Library. Take a group photo on the steps with at least one new friend.”
+   - Verification: GPS (Widener geofence) + QR/NFC at or near entrance + Photo.
+
+2. **Harvard Yard Chill Spot**
+   - Type: Location | Timing: E
+   - Mission: “Find a place to sit in Harvard Yard and relax or study with at least one other student.”
+   - Verification: GPS (Yard geofence) + Photo.
+
+3. **John Harvard Tradition (No Touch!)**
+   - Type: Location | Timing: E
+   - Mission: “Find the John Harvard statue. Take a creative group photo (no touching the foot).”
+   - Verification: GPS (statue geofence) + QR/NFC on a nearby sign or poster + Photo.
+
+4. **House / Yard Home Base**
+   - Type: Location | Timing: E
+   - Mission: “Visit your assigned Yard dorm or House. Take a photo of something that makes it feel like home.”
+   - Verification: GPS (around House/Yard) + optional QR/NFC at entryway desk + Photo.
+
+5. **Dining Hall Debut**
+   - Type: Location + Social | Timing: O → E
+   - Mission: “Have a meal in a main dining hall with at least one new friend from another country.”
+   - Verification: GPS (dining hall) + QR/NFC near entrance/exit or at a staff desk + Photo.
+
+---
+
+### B. Support & academic resources
+
+6. **International Office Check-in**
+   - Type: Resource | Timing: E
+   - Mission: “Visit the international student office. Say hello and learn one resource they offer.”
+   - Verification: QR/NFC inside the office (staff-controlled) + GPS + Photo at office sign.
+
+7. **Library Pro Tip**
+   - Type: Resource + Academic | Timing: E
+   - Mission: “Go inside a library, find a study space, and ask a librarian one question.”
+   - Verification: QR/NFC on the reference desk or posted sign (staff involvement) + GPS + Photo of a study spot (no faces).
+
+8. **Health & Wellness Tour**
+   - Type: Resource | Timing: E
+   - Mission: “Find the campus health or counseling center and learn one type of support they offer.”
+   - Verification: GPS + QR/NFC at reception or a poster + Photo of the building or sign.
+
+9. **IT / Tech Setup**
+   - Type: Resource | Timing: O (best done early)
+   - Mission: “Visit IT support or finish connecting your device to Wi-Fi/Harvard email.”
+   - Verification: QR/NFC at IT desk OR upload a redacted screenshot of Wi-Fi/email success + simple ‘Done’ button.
+
+10. **Money & Jobs Info**
+    - Type: Resource | Timing: O → E
+    - Mission: “Learn about student jobs or financial support from a relevant office or workshop.”
+    - Verification: QR/NFC at event/office + optional short text field: ‘One thing I learned is…’ + Photo of a neutral sign/slide.
+
+---
+
+### C. Social & cross-cultural missions
+
+11. **Global Group Photo**
+   - Type: Social | Timing: E
+   - Mission: “Take a group photo with at least 3 different countries represented.”
+   - Verification: Photo + checkbox where each participant selects their country; GPS (any campus).
+
+12. **Ask an American**
+   - Type: Social | Timing: E
+   - Mission: “Ask a domestic student one question about U.S. college life and take a selfie together.”
+   - Verification: Photo + short text answer: ‘What I learned…’ + GPS.
+
+13. **Club Fair Connection**
+   - Type: Social + Resource | Timing: O (during activities fair)
+   - Mission: “Visit the club/activities fair and take a photo at the table of a club you might join.”
+   - Verification: QR/NFC at the fair entrance or at participating tables + GPS.
+
+14. **Cultural Swap**
+   - Type: Social | Timing: E
+   - Mission: “Teach someone a greeting in your language and learn one in theirs. Take a selfie together.”
+   - Verification: Photo + two short text fields: ‘I taught…’ and ‘I learned…’ + GPS.
+
+15. **Study Squad**
+   - Type: Social + Academic | Timing: E
+   - Mission: “Form a study group (2+ people) and work together at a library or study space.”
+   - Verification: GPS (study area) + Photo of group (no close-ups of notes) + optional QR/NFC if in a library.
+
+---
+
+### D. Academic engagement
+
+16. **First Class Snapshot**
+   - Type: Academic | Timing: O (first week)
+   - Mission: “After your first class, take a photo of your notes, backpack, or classroom entry.”
+   - Verification: GPS (academic building) + Photo.
+
+17. **Office Hours Explorer**
+   - Type: Academic | Timing: E (but encourage early)
+   - Mission: “Attend an instructor’s office hours once.”
+   - Verification: GPS (building) + optional QR/NFC on a sign outside the office + Photo of the hallway/door (not during the meeting).
+
+18. **Library Treasure**
+   - Type: Academic | Timing: E
+   - Mission: “Find a book related to your major or a hobby in the stacks and take a photo of its cover.”
+   - Verification: GPS (library) + QR/NFC on stacks sign + Photo.
+
+---
+
+### E. Everyday life & settling in
+
+19. **Grocery/Pharmacy Run**
+   - Type: Life | Timing: E
+   - Mission: “Visit a local grocery or pharmacy and find a product that’s new/weird to you.”
+   - Verification: GPS (predefined nearby stores) + Photo of shelf or product.
+
+20. **Transportation Trial**
+   - Type: Life | Timing: E
+   - Mission: “Use public transport (T/bus/shuttle/bike). Take a photo at a station, stop, or on board.”
+   - Verification: GPS at common stops/stations + Photo.
+
+21. **Phone or Banking Setup**
+   - Type: Life | Timing: O
+   - Mission: “Set up a local phone plan or bank account if relevant.”
+   - Verification: Photo of storefront/logo or a redacted confirmation screenshot + ‘Done’ button.
+
+22. **Campus Green Space**
+   - Type: Life | Timing: E
+   - Mission: “Find a green/open area and spend a few minutes there. Take a photo of your view.”
+   - Verification: GPS (predefined lawns/fields) + Photo.
+
+23. **Self-Care Moment**
+   - Type: Life + Wellness | Timing: E
+   - Mission: “Do one self-care activity (walk, call home, exercise, etc.). Capture it.”
+   - Verification: Photo + short text: ‘This helps me feel grounded because…’ + GPS (flexible).
+
+---
+
+### F. Events & time-limited missions
+
+24. **Welcome Event Check-in**
+   - Type: Event | Timing: O (specific date/time)
+   - Mission: “Attend the main international welcome or orientation event.”
+   - Verification: Time window + GPS at event location + QR/NFC near entrance + Photo.
+
+25. **Workshop Bonus**
+   - Type: Event + Resource | Timing: O
+   - Mission: “Attend any labeled ‘International Student Workshop’ (e.g., on academics, health, culture shock).”
+   - Verification: Time window + QR/NFC shown by staff at end of session.
+
+26. **First Weekend Explorer**
+   - Type: Event + Life | Timing: O (first weekend)
+   - Mission: “Visit a nearby neighborhood or landmark beyond the main Yard (e.g., river, nearby square).”
+   - Verification: Time window + GPS at one of several approved off-campus spots + Photo.
+
+27. **Event Photo of the Week**
+   - Type: Event | Timing: Weekly
+   - Mission: “Take a photo at any campus event this week.”
+   - Verification: Time window + GPS + Photo; staff or admin can feature favorites.
+
+---
+
+### G. Reflection & “meta” missions
+
+28. **What I Wish I Knew**
+   - Type: Reflection | Timing: E (after first 2+ weeks)
+   - Mission: “Share one thing you wish you knew before coming.”
+   - Verification: Short text + Photo (anywhere on campus) + GPS.
+
+29. **Resource Master**
+   - Type: Meta Badge | Timing: E
+   - Mission (auto-computed): “Complete at least 3 resource missions (International Office, Library Pro Tip, Health & Wellness, IT, Money & Jobs).”
+   - Verification: System grants a “Resource Master” badge and bonus points when criteria met.
+
+30. **Global Connector**
+   - Type: Meta Badge | Timing: E
+   - Mission (auto-computed): “Complete at least 3 social/cross-cultural missions with students from different countries.”
+   - Verification: System calculates from existing mission completions.
+
+---
+
+## 2. Simple points algorithm
+
+You can explain this to engineers as configuration rather than hard-coded values.
+
+### A. Base points per mission
+
+Assign each mission a difficulty:
+
+- **Easy** (short, simple): 10 points  
+- **Medium** (needs interaction/travel): 15 points  
+- **Hard** (office hours, workshops, off-campus): 20 points  
+
+Examples:
+- Easy: Harvard Yard Chill Spot, Self-Care Moment  
+- Medium: Dining Hall Debut, Ask an American, Transportation Trial  
+- Hard: Office Hours Explorer, Off-campus Explorer, Workshop Bonus
+
+### B. Bonus points
+
+Per submission:
+
+1. **Group size bonus**
+   - 1 person: +0  
+   - 2–3 people in the photo: +3  
+   - 4–6 people: +5  
+   - Cap at 6 to prevent huge staged crowds skewing the game.
+
+2. **Nationality diversity bonus**
+   - If the mission allows multiple participants to tag their country:
+     - 1–2 countries represented: +0  
+     - 3+ countries: +3 bonus
+
+3. **Photo feed sharing bonus**
+   - If user checks “Share this photo to the public feed”: +2 points
+   - This encourages content but doesn’t overpower mission points.
+
+4. **Limited-time “event” bonus**
+   - For missions flagged as time-limited and completed within their active window: +5 bonus
+
+5. **Badge/achievement bonuses** (auto-calculated)
+   - Resource Master badge: +20 once  
+   - Global Connector badge: +20 once  
+   - Campus Explorer badge (e.g., complete 5 location missions): +20 once
+
+### C. Daily/weekly caps & anti-gaming
+
+- **Per mission**:  
+  - Each mission can be fully completed only **once per student** (badges and weekly event missions can repeat but with decreasing returns if you want).
+- **Daily cap** (optional):  
+  - First 5 completed missions per day earn full points; any additional missions that day earn 50% of their normal base points.
+- **Location checks**:
+  - Require GPS to be inside the mission’s geofence.
+- **QR/NFC checks**:
+  - For some key missions, you only get completion if QR/NFC is scanned (so they must truly go inside offices/events).
+
+### D. Individual and group scoring
+
+- **Individual score**: Sum of all their mission points + bonuses + badges.
+- **Group score** (choose one model):
+  1. **House-based/team-based**:
+     - Each student belongs to exactly one team (e.g., by House/Yard or self-chosen team).
+     - Team score = sum of the **top N** members’ scores (e.g., top 10 in that team) to avoid big teams always winning.
+  2. **Average score model**:
+     - Team score = average of member scores; helps smaller teams compete.
+
+Please respond with:
+- A clear data model
+- Example endpoints
+- The scoring logic in code/pseudocode
+- Notes on how you’d structure this for maintainability and future extension
