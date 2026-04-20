@@ -17,7 +17,6 @@ const TYPES = [
   { id: 'tip',      label: 'Tip',      hint: 'Share a helpful tip or trick' },
   { id: 'story',    label: 'Story',    hint: 'Tell a personal experience' },
   { id: 'resource', label: 'Resource', hint: 'Link to a useful resource' },
-  { id: 'activity', label: 'Activity', hint: 'Start a group challenge' },
 ]
 
 function createColoredPinIcon(color) {

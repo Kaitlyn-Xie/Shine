@@ -48,14 +48,13 @@ export const CONTENT_ITEMS = [
     likes: 134, comments: 27, time: '2d ago',
   },
   {
-    id: 6, type: 'activity',
+    id: 6, type: 'story',
     title: 'Harvard Coffee Shop Crawl ☕',
-    body: 'Visit 5 local coffee spots around campus and share your review! Science Center, Crema, Darwin\'s, Peet\'s, and one hidden gem of your choice.',
+    body: 'Visited 5 local coffee spots around campus — Science Center, Crema, Darwin\'s, Peet\'s, and one hidden gem. Each one has its own vibe. Darwin\'s won.',
     location: { lat: 42.3762, lng: -71.1148, label: 'Science Center' },
     username: 'Omar K.', initials: 'OK',
     avatarBg: 'linear-gradient(135deg, #FFE0B0, #FF8C00)',
     likes: 56, comments: 19, time: '3d ago',
-    participants: 12, goal: 5,
   },
   {
     id: 7, type: 'question',
@@ -85,14 +84,13 @@ export const CONTENT_ITEMS = [
     likes: 93, comments: 8, time: 'Pinned',
   },
   {
-    id: 10, type: 'activity',
-    title: 'Harvard Yard Sunrise Photo Challenge',
-    body: 'Take a photo of Harvard Yard at sunrise (before 7am), post it here with the tag #SHINEsunrise. Best shot wins bragging rights.',
+    id: 10, type: 'tip',
+    title: 'Harvard Yard at sunrise — worth the early wake-up',
+    body: 'Set your alarm for 6:30am and walk to Harvard Yard before anyone else is up. The light through the trees is incredible. Bring your camera.',
     location: { lat: 42.3755, lng: -71.1130, label: 'Harvard Yard' },
     username: 'Mei Lin', initials: 'ML',
     avatarBg: 'linear-gradient(135deg, #FFD6B0, #FF9A3C)',
     likes: 67, comments: 31, time: '5d ago',
-    participants: 28, goal: 1,
   },
   {
     id: 11, type: 'tip',
@@ -148,7 +146,6 @@ export const TYPE_CONFIG = {
   tip:      { color: '#FF9A3C', light: '#FFF5EE', label: 'Tip' },
   story:    { color: '#CC66FF', light: '#F8EEFF', label: 'Story' },
   resource: { color: '#3CB87A', light: '#EEFFF6', label: 'Resource' },
-  activity: { color: '#FF6B6B', light: '#FFEEEE', label: 'Activity' },
 }
 
 export const FILTERS = [
@@ -157,5 +154,4 @@ export const FILTERS = [
   { id: 'tip',      label: 'Tips',      color: '#FF9A3C' },
   { id: 'story',    label: 'Stories',   color: '#CC66FF' },
   { id: 'resource', label: 'Resources', color: '#3CB87A' },
-  { id: 'activity', label: 'Activities',color: '#FF6B6B' },
 ]
