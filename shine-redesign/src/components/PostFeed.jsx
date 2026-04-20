@@ -469,11 +469,14 @@ function WeeklyPromptBanner({ user, onRespond }) {
 
 // ── Sub-view: Community Feed ──────────────────────────────────────────────────
 
-function FeedView({ userPosts = [], onNewPost, user = {} }) {
+function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
   const [liked, setLiked] = useState(new Set())
   const [localLikes, setLocalLikes] = useState({})
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [editingPost, setEditingPost] = useState(null)
+
+  const userPostIds = new Set(userPosts.map(p => p.id))
 
   const allPosts = [...userPosts, ...INIT_POSTS]
 
@@ -512,6 +515,16 @@ function FeedView({ userPosts = [], onNewPost, user = {} }) {
         />
       )}
 
+      {/* Edit post sheet */}
+      {editingPost && (
+        <CreatePostSheet
+          user={user}
+          editPost={editingPost}
+          onClose={() => setEditingPost(null)}
+          onSubmit={(updated) => { onEditPost && onEditPost(updated); setEditingPost(null) }}
+        />
+      )}
+
       {/* Weekly Prompt */}
       <WeeklyPromptBanner user={user} onRespond={() => setShowCreate(true)} />
 
@@ -530,10 +543,10 @@ function FeedView({ userPosts = [], onNewPost, user = {} }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '12px 10px 100px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {left.map((p, i)  => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07} extraLikes={localLikes[p.id] ?? 0} />)}
+          {left.map((p, i)  => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07} extraLikes={localLikes[p.id] ?? 0} onEdit={userPostIds.has(p.id) ? () => setEditingPost(p) : null} />)}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 28 }}>
-          {right.map((p, i) => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07 + 0.04} extraLikes={localLikes[p.id] ?? 0} />)}
+          {right.map((p, i) => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07 + 0.04} extraLikes={localLikes[p.id] ?? 0} onEdit={userPostIds.has(p.id) ? () => setEditingPost(p) : null} />)}
         </div>
       </div>
     </>
@@ -586,10 +599,10 @@ function SearchBar({ value, onChange, placeholder = 'Search…' }) {
   )
 }
 
-function PostCard({ post, liked, onLike, delay, extraLikes = 0 }) {
+function PostCard({ post, liked, onLike, delay, extraLikes = 0, onEdit }) {
   const displayLikes = (post.likes ?? 0) + extraLikes
   return (
-    <div className="fade-in" style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', animationDelay: `${delay}s` }}>
+    <div className="fade-in" style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', animationDelay: `${delay}s`, position: 'relative' }}>
       {/* Media area */}
       {post.mediaType === 'textcard' ? (
         <div style={{
@@ -615,6 +628,13 @@ function PostCard({ post, liked, onLike, delay, extraLikes = 0 }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <Avatar name={post.username} size={20} bg={post.avatarBg} />
           <span style={{ fontSize: 11, color: 'var(--text-secondary)', flex: 1, fontWeight: 500 }}>{post.username}</span>
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', marginRight: 2, fontSize: 13 }}
+              title="Edit post"
+            >✏️</button>
+          )}
           <button onClick={() => onLike(post.id)} style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             <HeartIcon size={14} color={liked ? '#E8415A' : '#BBBBBB'} filled={liked} />
             <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{displayLikes}</span>
@@ -634,13 +654,14 @@ const TEXT_CARD_GRADIENTS = [
   'linear-gradient(135deg, #84fab0, #8fd3f4)',
 ]
 
-function CreatePostSheet({ user, onClose, onSubmit }) {
-  const [mode, setMode] = useState('photo') // 'photo' | 'textcard'
-  const [photoPreview, setPhotoPreview] = useState(null)
-  const [textContent, setTextContent] = useState('')
-  const [gradientIdx, setGradientIdx] = useState(0)
-  const [caption, setCaption] = useState('')
-  const [pinData, setPinData] = useState(null)   // { lat, lng, name } | null
+function CreatePostSheet({ user, onClose, onSubmit, editPost = null }) {
+  const isEditing = editPost !== null
+  const [mode, setMode] = useState(editPost?.mediaType ?? 'photo')
+  const [photoPreview, setPhotoPreview] = useState(editPost?.img ?? null)
+  const [textContent, setTextContent] = useState(editPost?.textContent ?? '')
+  const [gradientIdx, setGradientIdx] = useState(editPost?.gradientIdx ?? 0)
+  const [caption, setCaption] = useState(editPost?.text ?? '')
+  const [pinData, setPinData] = useState(editPost?.location ?? null)
   const [showInlineMap, setShowInlineMap] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const fileRef = useRef(null)
@@ -661,12 +682,13 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
     if (!canSubmit || submitting) return
     setSubmitting(true)
     const post = {
-      id: Date.now(),
-      username: user.name ?? 'You',
-      avatarBg: '#FFC94A',
+      ...(isEditing ? editPost : {}),
+      id: isEditing ? editPost.id : Date.now(),
+      username: editPost?.username ?? user.name ?? 'You',
+      avatarBg: editPost?.avatarBg ?? '#FFC94A',
       text: caption.trim(),
-      likes: 0,
-      time: 'just now',
+      likes: editPost?.likes ?? 0,
+      time: isEditing ? editPost.time : 'just now',
       mediaType: mode,
       img: mode === 'photo' ? photoPreview : null,
       imgH: 140,
@@ -695,7 +717,7 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
             <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 14px' }}>
-            <span style={{ fontSize: 17, fontWeight: 800 }}>Create Post</span>
+            <span style={{ fontSize: 17, fontWeight: 800 }}>{isEditing ? '✏️ Edit Post' : 'Create Post'}</span>
             <button onClick={onClose} style={iconBtn}><CloseIcon size={20} color="#4A4A4A" /></button>
           </div>
 
@@ -857,7 +879,7 @@ function CreatePostSheet({ user, onClose, onSubmit }) {
               transition: 'all 0.2s',
             }}
           >
-            {submitting ? 'Posting…' : 'Share Post'}
+            {submitting ? (isEditing ? 'Saving…' : 'Posting…') : (isEditing ? 'Save changes' : 'Share Post')}
           </button>
         </div>
         </div>

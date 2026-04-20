@@ -4,6 +4,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { CONTENT_ITEMS, TYPE_CONFIG, FILTERS } from '../data'
 import { SearchIcon, HeartIcon, MessageIcon, CloseIcon, ListIcon, MapIcon, SunIcon } from './Icons'
+import CreateContent from './CreateContent'
 
 // Fix leaflet default icon URLs
 delete L.Icon.Default.prototype._getIconUrl
@@ -77,14 +78,16 @@ function useBlockMapEvents(ref) {
   }, [ref])
 }
 
-export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts = [] }) {
+export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts = [], onEditSunlightPost }) {
   const [filter, setFilter] = useState('all')
   const [selected, setSelected] = useState(null)
   const [selectedStory, setSelectedStory] = useState(null)
   const [listView, setListView] = useState(false)
   const [search, setSearch] = useState('')
+  const [editingPost, setEditingPost] = useState(null)
 
   const storyPosts = communityPosts.filter(p => p.location)
+  const sunlightPostIds = new Set(sunlightPosts.map(p => p.id))
 
   const searchRef = useRef(null)
   const filterRef = useRef(null)
@@ -279,7 +282,12 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
 
       {/* ── Pin detail bottom sheet ── */}
       {selected && !listView && (
-        <PinBottomSheet item={selected} onClose={() => setSelected(null)} />
+        <PinBottomSheet
+          item={selected}
+          isSunlightPost={sunlightPostIds.has(selected.id)}
+          onEdit={() => { setEditingPost(selected); setSelected(null) }}
+          onClose={() => setSelected(null)}
+        />
       )}
 
       {/* ── Story (community post) bottom sheet ── */}
@@ -295,12 +303,21 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
           onClose={() => setListView(false)}
         />
       )}
+
+      {/* ── Edit sunlight post ── */}
+      {editingPost && (
+        <CreateContent
+          editPost={editingPost}
+          onClose={() => setEditingPost(null)}
+          onSubmit={(updated) => { onEditSunlightPost?.(updated); setEditingPost(null) }}
+        />
+      )}
     </div>
   )
 }
 
 // ── Pin detail bottom sheet ──────────────────────────────────────────────────
-function PinBottomSheet({ item, onClose }) {
+function PinBottomSheet({ item, onClose, isSunlightPost, onEdit }) {
   const cfg = TYPE_CONFIG[item.type] ?? TYPE_CONFIG.story
   return (
     <div className="slide-up" style={{
@@ -321,9 +338,24 @@ function PinBottomSheet({ item, onClose }) {
         }}>
           {cfg.label.toUpperCase()}
         </span>
-        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-          <CloseIcon size={18} color="#9A9A9A" />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {isSunlightPost && (
+            <button
+              onClick={onEdit}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5,
+                background: cfg.light, border: `1.5px solid ${cfg.color}44`,
+                borderRadius: 20, padding: '5px 12px', cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, color: cfg.color,
+              }}
+            >
+              ✏️ Edit
+            </button>
+          )}
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+            <CloseIcon size={18} color="#9A9A9A" />
+          </button>
+        </div>
       </div>
       <h3 style={{ fontSize: 17, fontWeight: 800, lineHeight: 1.35, marginBottom: 8, color: '#1A1A1A' }}>
         {item.title}

@@ -122,11 +122,12 @@ function InlineMapPicker({ pinColor, onConfirm, onCancel }) {
   )
 }
 
-export default function CreateContent({ onClose, onSubmit }) {
-  const [type, setType] = useState('tip')
-  const [title, setTitle] = useState('')
-  const [body, setBody] = useState('')
-  const [location, setLocation] = useState(null)
+export default function CreateContent({ onClose, onSubmit, editPost = null }) {
+  const isEditing = editPost !== null
+  const [type, setType] = useState(editPost?.type ?? 'tip')
+  const [title, setTitle] = useState(editPost?.title ?? '')
+  const [body, setBody] = useState(editPost?.body ?? '')
+  const [location, setLocation] = useState(editPost?.location ?? null)
   const [showMapPicker, setShowMapPicker] = useState(false)
 
   const cfg = TYPE_CONFIG[type]
@@ -135,13 +136,14 @@ export default function CreateContent({ onClose, onSubmit }) {
   const handleSubmit = () => {
     if (!canSubmit) return
     onSubmit({
-      id: Date.now(),
+      ...(isEditing ? editPost : {}),
+      id: isEditing ? editPost.id : Date.now(),
       type,
       title: title.trim(),
       body: body.trim(),
       location: location ?? null,
-      likes: 0,
-      time: 'Just now',
+      likes: isEditing ? editPost.likes : 0,
+      time: isEditing ? editPost.time : 'Just now',
     })
     onClose()
   }
@@ -168,7 +170,7 @@ export default function CreateContent({ onClose, onSubmit }) {
           borderBottom: '1px solid var(--border)',
           flexShrink: 0,
         }}>
-          <span style={{ fontSize: 18, fontWeight: 800 }}>✨ New Sunlight Post</span>
+          <span style={{ fontSize: 18, fontWeight: 800 }}>{isEditing ? '✏️ Edit Sunlight Post' : '✨ New Sunlight Post'}</span>
           <button onClick={onClose} style={iconBtn}>
             <CloseIcon size={20} color="#4A4A4A" />
           </button>
@@ -321,7 +323,7 @@ export default function CreateContent({ onClose, onSubmit }) {
             }}
           >
             <CheckIcon size={18} color={canSubmit ? '#fff' : '#AAAAAA'} />
-            Post {TYPE_CONFIG[type].label}
+            {isEditing ? 'Save changes' : `Post ${TYPE_CONFIG[type].label}`}
           </button>
         </div>
       </div>

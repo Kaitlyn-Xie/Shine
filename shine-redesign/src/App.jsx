@@ -59,6 +59,8 @@ export default function App() {
 
   const handleNewPost = (post) => setCommunityPosts(prev => [post, ...prev])
   const handleNewSunlightPost = (post) => setSunlightPosts(prev => [post, ...prev])
+  const handleEditPost = (updated) => setCommunityPosts(prev => prev.map(p => p.id === updated.id ? updated : p))
+  const handleEditSunlightPost = (updated) => setSunlightPosts(prev => prev.map(p => p.id === updated.id ? updated : p))
 
   const handleUpdateUser = (updates) => {
     const updated = { ...user, ...updates }
@@ -69,8 +71,8 @@ export default function App() {
   const renderScreen = () => {
     if (showProfile) return <Profile user={user} onBack={() => setShowProfile(false)} onUpdate={handleUpdateUser} onSignOut={() => { localStorage.removeItem('shine_user'); setUser(null); setShowProfile(false) }} />
     switch (tab) {
-      case 'map':  return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} sunlightPosts={sunlightPosts} />
-      case 'post': return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} user={user} />
+      case 'map':  return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} sunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} />
+      case 'post': return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} />
       case 'chat': return <Chat />
       default:     return <MapHome communityPosts={communityPosts} />
     }
