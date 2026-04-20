@@ -7,6 +7,7 @@ import {
   MISSIONS, BADGES, MOCK_LEADERBOARD, MOCK_GROUP_LEADERBOARD,
   HUNT_TYPE_CONFIG, DIFFICULTY_POINTS, computePoints, getDistance,
 } from '../data/missions'
+import { api } from '../lib/api'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const HUNT_PRIMARY = '#1B8757'
@@ -480,6 +481,28 @@ export default function ScavengerHunt({ user }) {
   const [completing, setCompleting] = useState(null)
   const [newBadge, setNewBadge] = useState(null)
 
+  // Load hunt state from API on mount
+  useEffect(() => {
+    api.getHuntStats()
+      .then(stats => {
+        const completions = stats.completions.map(c => ({
+          missionId: c.missionId,
+          timestamp: new Date(c.createdAt).getTime(),
+          pts: { total: c.ptsTotal, base: c.ptsTotal, bonus: 0 },
+          photoUrl: c.photoUrl,
+          shareToFeed: c.shareToFeed,
+        }))
+        const earnedBadgeIds = BADGES.filter(b => b.check(completions)).map(b => b.id)
+        const feedItems = stats.completions
+          .filter(c => c.shareToFeed && c.photoUrl)
+          .map(c => ({ photoUrl: c.photoUrl, missionTitle: c.missionTitle, time: c.time }))
+        const updated = { completions, badges: earnedBadgeIds, feedItems }
+        setHuntData(updated)
+        saveHunt(updated)
+      })
+      .catch(() => {})
+  }, [])
+
   const completedIds = new Set(huntData.completions.map(c => c.missionId))
   const totalPts = huntData.completions.reduce((s, c) => s + (c.pts?.total ?? 0), 0)
   const badgePts = huntData.badges.reduce((s, id) => { const b = BADGES.find(b => b.id === id); return s + (b?.points ?? 0) }, 0)
@@ -498,6 +521,15 @@ export default function ScavengerHunt({ user }) {
     const updated = { completions: newCompletions, badges: newBadgeIds, feedItems: feedItem ? [...huntData.feedItems, feedItem] : huntData.feedItems }
     setHuntData(updated); saveHunt(updated)
     if (newBadges.length > 0) setNewBadge(newBadges[0])
+
+    // Persist to API in background
+    api.completeHuntMission({
+      missionId: mission.id,
+      missionTitle: mission.title,
+      ptsTotal: pts?.total ?? 0,
+      photoUrl: photoUrl ?? null,
+      shareToFeed: shareToFeed ?? false,
+    }).catch(e => console.error('API hunt save failed:', e))
   }
 
   return (

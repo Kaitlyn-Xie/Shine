@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import BottomNav from './components/BottomNav'
 import MapHome from './components/MapHome'
 import PostFeed from './components/PostFeed'
@@ -9,8 +9,8 @@ import ScavengerHunt from './components/ScavengerHunt'
 import Login from './components/Login'
 import Onboarding from './components/Onboarding'
 import { MessageIcon, HeartIcon } from './components/Icons'
+import { api } from './lib/api'
 
-// ── Post sub-menu options ────────────────────────────────────────────────────
 const POST_OPTIONS = [
   { id: 'cq',   Icon: MessageIcon, label: 'Community Questions', desc: 'Ask & answer the community',      color: '#5599EE' },
   { id: 'feed', Icon: HeartIcon,   label: 'Community Feed',      desc: 'Photos & stories from students',  color: '#3CB87A' },
@@ -29,12 +29,39 @@ export default function App() {
   const [communityPosts, setCommunityPosts] = useState([])
   const [sunlightPosts, setSunlightPosts] = useState([])
 
+  // Load posts from the API when user is logged in
+  useEffect(() => {
+    if (!user) return
+    api.getFeedPosts()
+      .then(posts => setCommunityPosts(posts))
+      .catch(() => {})
+    api.getSunlightPosts()
+      .then(posts => setSunlightPosts(posts))
+      .catch(() => {})
+  }, [user?.email])
+
   // ── Auth gates ──────────────────────────────────────────────────────────────
   if (!user) {
     return <Login onLogin={u => setUser(u)} />
   }
   if (!user.onboarded) {
-    return <Onboarding user={user} onComplete={u => setUser(u)} />
+    return <Onboarding user={user} onComplete={async (profile) => {
+      try {
+        await api.updateMe({
+          name: profile.name,
+          country: profile.country,
+          year: profile.year,
+          concentration: profile.concentration,
+          house: profile.house,
+          interests: profile.interests,
+          onboarded: true,
+        })
+      } catch (e) {
+        console.error('Failed to save profile to API:', e)
+      }
+      localStorage.setItem('shine_user', JSON.stringify(profile))
+      setUser(profile)
+    }} />
   }
 
   // ── Main app ─────────────────────────────────────────────────────────────────
@@ -55,15 +82,61 @@ export default function App() {
 
   const isMap = tab === 'map'
 
-  const handleNewPost = (post) => setCommunityPosts(prev => [post, ...prev])
-  const handleNewSunlightPost = (post) => setSunlightPosts(prev => [post, ...prev])
+  const handleNewPost = async (post) => {
+    const postWithUser = { ...post, username: user.name || post.username, userId: user.id }
+    setCommunityPosts(prev => [postWithUser, ...prev])
+    try {
+      const saved = await api.createFeedPost({
+        text: postWithUser.text || '',
+        img: postWithUser.img || null,
+        mediaType: postWithUser.mediaType || null,
+        textContent: postWithUser.textContent || null,
+        gradientIdx: postWithUser.gradientIdx ?? null,
+        locationName: postWithUser.location?.name || null,
+        locationLat: postWithUser.location?.lat || null,
+        locationLng: postWithUser.location?.lng || null,
+      })
+      setCommunityPosts(prev => prev.map(p => p.id === post.id ? { ...saved, id: saved.id } : p))
+    } catch (e) {
+      console.error('Failed to save post:', e)
+    }
+  }
+
+  const handleNewSunlightPost = async (post) => {
+    const postWithUser = {
+      ...post,
+      username: user.name || 'You',
+      initials: (user.name || 'YO').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
+      avatarBg: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
+    }
+    setSunlightPosts(prev => [postWithUser, ...prev])
+    try {
+      const saved = await api.createSunlightPost({
+        type: post.type,
+        title: post.title,
+        body: post.body,
+        locationLat: post.location?.lat || null,
+        locationLng: post.location?.lng || null,
+        locationLabel: post.location?.label || null,
+      })
+      setSunlightPosts(prev => prev.map(p => p.id === post.id ? saved : p))
+    } catch (e) {
+      console.error('Failed to save sunlight post:', e)
+    }
+  }
+
   const handleEditPost = (updated) => setCommunityPosts(prev => prev.map(p => p.id === updated.id ? updated : p))
   const handleEditSunlightPost = (updated) => setSunlightPosts(prev => prev.map(p => p.id === updated.id ? updated : p))
 
-  const handleUpdateUser = (updates) => {
+  const handleUpdateUser = async (updates) => {
     const updated = { ...user, ...updates }
     localStorage.setItem('shine_user', JSON.stringify(updated))
     setUser(updated)
+    try {
+      await api.updateMe(updates)
+    } catch (e) {
+      console.error('Failed to update user:', e)
+    }
   }
 
   const renderScreen = () => {
@@ -71,7 +144,7 @@ export default function App() {
       case 'map':     return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} sunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} />
       case 'post':    return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} />
       case 'chat':    return <Chat />
-      case 'profile': return <Profile user={user} onUpdate={handleUpdateUser} userPosts={communityPosts} userSunlightPosts={sunlightPosts} onSignOut={() => { localStorage.removeItem('shine_user'); setUser(null); setTab('map') }} />
+      case 'profile': return <Profile user={user} onUpdate={handleUpdateUser} userPosts={communityPosts} userSunlightPosts={sunlightPosts} onSignOut={() => { localStorage.removeItem('shine_user'); localStorage.removeItem('shine_session'); setUser(null); setTab('map') }} />
       case 'hunt':    return <ScavengerHunt user={user} />
       default:        return <MapHome communityPosts={communityPosts} />
     }

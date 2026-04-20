@@ -1,30 +1,37 @@
 import { useState } from 'react'
 import { SunIcon } from './Icons'
+import { api } from '../lib/api'
 
 export default function Login({ onLogin }) {
-  const [mode, setMode] = useState('signin') // 'signin' | 'signup'
+  const [mode, setMode] = useState('signin')
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [showPass, setShowPass] = useState(false)
+  const [loading, setLoading] = useState(false)
 
   const valid = email.trim() && password.length >= 6 && (mode === 'signin' || name.trim())
 
-  const handleSubmit = () => {
-    if (!valid) { setError('Please fill in all fields (password min 6 chars).'); return }
+  const handleSubmit = async () => {
+    if (!valid || loading) return
     setError('')
-    const existing = JSON.parse(localStorage.getItem('shine_user') || 'null')
-    if (mode === 'signin') {
-      if (existing && existing.email === email.trim()) {
-        onLogin(existing)
+    setLoading(true)
+    try {
+      let result
+      if (mode === 'signup') {
+        result = await api.signup(name.trim(), email.trim(), password)
       } else {
-        setError('No account found. Sign up instead?')
+        result = await api.signin(email.trim(), password)
       }
-    } else {
-      const user = { email: email.trim(), name: name.trim(), password, onboarded: false }
-      localStorage.setItem('shine_user', JSON.stringify(user))
-      onLogin(user)
+      localStorage.setItem('shine_session', result.sessionToken)
+      const u = { ...result.user, onboarded: result.user.onboarded }
+      localStorage.setItem('shine_user', JSON.stringify(u))
+      onLogin(u)
+    } catch (e) {
+      setError(e.message || 'Something went wrong. Please try again.')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -121,15 +128,15 @@ export default function Login({ onLogin }) {
           </div>
         )}
 
-        <button onClick={handleSubmit}
+        <button onClick={handleSubmit} disabled={!valid || loading}
           style={{
-            width: '100%', padding: '15px 0', border: 'none', borderRadius: 14, cursor: 'pointer',
+            width: '100%', padding: '15px 0', border: 'none', borderRadius: 14, cursor: valid && !loading ? 'pointer' : 'default',
             fontSize: 16, fontWeight: 800, color: '#fff',
-            background: valid ? 'linear-gradient(135deg, #FFC94A, #FF9A3C)' : '#E0E0E0',
-            boxShadow: valid ? '0 4px 20px rgba(255,154,60,0.4)' : 'none',
+            background: valid && !loading ? 'linear-gradient(135deg, #FFC94A, #FF9A3C)' : '#E0E0E0',
+            boxShadow: valid && !loading ? '0 4px 20px rgba(255,154,60,0.4)' : 'none',
             transition: 'all 0.2s',
           }}>
-          {mode === 'signin' ? 'Sign In' : 'Create Account'}
+          {loading ? '…' : mode === 'signin' ? 'Sign In' : 'Create Account'}
         </button>
       </div>
 

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { CloseIcon, PlusIcon, GlobeIcon, CheckIcon } from './Icons'
 import { TYPE_CONFIG } from '../data'
 import { BADGES } from '../data/missions'
+import { api } from '../lib/api'
 
 function readHuntData() {
   try {
@@ -251,6 +252,22 @@ function UserPostCard({ post }) {
 export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPosts = [], userSunlightPosts = [] }) {
   const [activeTab, setActiveTab] = useState('all')
   const [showEdit, setShowEdit] = useState(false)
+  const [huntData, setHuntData] = useState(readHuntData)
+
+  useEffect(() => {
+    api.getHuntStats()
+      .then(stats => {
+        const completions = stats.completions.map(c => ({
+          missionId: c.missionId,
+          pts: { total: c.ptsTotal, base: c.ptsTotal, bonus: 0 },
+          photoUrl: c.photoUrl,
+          shareToFeed: c.shareToFeed,
+        }))
+        const earnedBadgeIds = BADGES.filter(b => b.check(completions)).map(b => b.id)
+        setHuntData({ completions, badges: earnedBadgeIds, feedItems: [] })
+      })
+      .catch(() => {})
+  }, [])
 
   const toggleOnCampus = () => onUpdate?.({ isOnCampus: !user.isOnCampus })
 
@@ -261,7 +278,6 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
   const allPosts = [...userSunlightPosts, ...userPosts]
 
   // Hunt stats
-  const huntData = readHuntData()
   const huntPoints = huntData.completions.reduce((sum, c) => sum + (c.pts?.total ?? c.pts ?? 0), 0)
   const huntMissions = huntData.completions.length
   const earnedBadges = BADGES.filter(b => huntData.badges.includes(b.id))

@@ -10,10 +10,12 @@ import teamsRouter from "./teams";
 import statsRouter from "./stats";
 import badgesRouter from "./badges";
 import submissionsRouter from "./submissions";
+import shineRouter from "./shine";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
+router.use(shineRouter);
 router.use(usersRouter);
 router.use(roomsRouter);
 router.use(postsRouter);

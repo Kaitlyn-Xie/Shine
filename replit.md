@@ -2,10 +2,11 @@
 
 ## Project Overview
 
-**Shine** is a mobile-first React web app for Harvard College international undergraduate students.
+**Shine** is a mobile-first React PWA for Harvard College international undergraduate students.
 
-- **Phase 1 (Pre-arrival):** Safe Rooms (anonymous Q&A), curated resource guides, buddy circles, and a personalized prep path checklist
-- **Phase 2 (On-campus):** Scavenger hunt with missions, teams, leaderboard, and badges
+- **Features:** Map home (sunlight posts as pins), Community/Questions feed, Chat, Profile, Scavenger Hunt with missions/badges/leaderboard
+- **Backend:** Real PostgreSQL database via Express API — logins, posts, and hunt progress all persist server-side and sync across users
+- **Auth:** Email/password with scrypt hashing, UUID session tokens stored in localStorage (`shine_session`), sent via `x-session-id` header
 
 ### GitHub Repo
 `https://github.com/Kaitlyn-Xie/Shine.git` — collaborator write access as `li-mingpan` via Replit GitHub integration (connection ID: `conn_github_01KNAG3VMSQNZNCPGRVESZFQVW`)
