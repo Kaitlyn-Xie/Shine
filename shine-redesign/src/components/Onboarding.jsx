@@ -77,7 +77,7 @@ const STEPS = [
   { id: 'country',       title: 'Where are you from?',            subtitle: 'Help others connect with students from your home.' },
   { id: 'year',          title: 'What class year are you?',       subtitle: 'Find others who arrived when you did.' },
   { id: 'concentration', title: "What's your concentration?",     subtitle: "Don't worry — you can always change your mind!" },
-  { id: 'house',         title: 'Where are you living?',          subtitle: 'Connect with neighbors on campus.' },
+  { id: 'house',         title: 'Which dorm are you in?',          subtitle: 'Connect with neighbors on campus.' },
   { id: 'interests',     title: "What are you into?",             subtitle: 'Pick as many as you like.' },
 ]
 

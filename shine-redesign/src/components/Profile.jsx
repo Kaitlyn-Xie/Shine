@@ -138,7 +138,7 @@ function EditProfileSheet({ user, onClose, onSave }) {
 
           {/* House */}
           <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>House</label>
+            <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Dorm</label>
             <select
               value={house}
               onChange={e => setHouse(e.target.value)}
@@ -148,7 +148,7 @@ function EditProfileSheet({ user, onClose, onSave }) {
                 background: 'var(--bg)', outline: 'none', cursor: 'pointer',
               }}
             >
-              <option value="">Select house...</option>
+              <option value="">Select dorm...</option>
               {HOUSES.map(h => <option key={h} value={h}>{h}</option>)}
             </select>
           </div>
