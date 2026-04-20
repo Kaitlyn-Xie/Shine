@@ -29,6 +29,31 @@ export default function App() {
   const [communityPosts, setCommunityPosts] = useState([])
   const [sunlightPosts, setSunlightPosts] = useState([])
 
+  // Validate session on startup — if the stored token is stale, force re-login
+  useEffect(() => {
+    if (!user) return
+    const tok = localStorage.getItem('shine_session')
+    if (!tok) {
+      // No session token at all — clear stale user and go to login
+      localStorage.removeItem('shine_user')
+      setUser(null)
+      return
+    }
+    api.getMe()
+      .then(fresh => {
+        // Keep user state up to date with server data
+        const merged = { ...fresh, onboarded: fresh.onboarded ?? user.onboarded }
+        localStorage.setItem('shine_user', JSON.stringify(merged))
+        setUser(merged)
+      })
+      .catch(() => {
+        // Session token is invalid — force re-login
+        localStorage.removeItem('shine_user')
+        localStorage.removeItem('shine_session')
+        setUser(null)
+      })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Load posts from the API when user is logged in
   useEffect(() => {
     if (!user) return
