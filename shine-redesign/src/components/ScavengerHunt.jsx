@@ -456,32 +456,6 @@ function LeaderboardTab({ huntData, user }) {
   )
 }
 
-// ── Photo Feed Tab ────────────────────────────────────────────────────────────
-function FeedTab({ feedItems }) {
-  if (feedItems.length === 0) return (
-    <div style={{ textAlign: 'center', padding: '60px 24px' }}>
-      <div style={{ fontSize: 48, marginBottom: 12 }}>📸</div>
-      <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6 }}>No photos yet</div>
-      <div style={{ fontSize: 13, color: '#6B7280' }}>Complete missions and share photos to see them here.</div>
-    </div>
-  )
-  return (
-    <div style={{ padding: '14px 16px 20px' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-        {feedItems.map((item, i) => (
-          <div key={i} style={{ borderRadius: 14, overflow: 'hidden', background: '#fff', boxShadow: 'var(--shadow)' }}>
-            {item.photoUrl && <img src={item.photoUrl} alt="" style={{ width: '100%', height: 120, objectFit: 'cover' }} />}
-            <div style={{ padding: '8px 10px' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.35, marginBottom: 2 }}>{item.missionTitle}</div>
-              <div style={{ fontSize: 11, color: '#6B7280' }}>{item.time}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 // ── Badge Toast ───────────────────────────────────────────────────────────────
 function BadgeToast({ badge, onDone }) {
   useEffect(() => { const t = setTimeout(onDone, 3500); return () => clearTimeout(t) }, [onDone])
@@ -558,7 +532,7 @@ export default function ScavengerHunt({ user }) {
 
       {/* ── Inner Tabs ── */}
       <div style={{ background: '#fff', borderBottom: '1px solid var(--border)', display: 'flex', flexShrink: 0 }}>
-        {[{ id: 'missions', label: '🗺️ Missions' }, { id: 'leaderboard', label: '🏆 Board' }, { id: 'feed', label: '📸 Feed' }].map(t => (
+        {[{ id: 'missions', label: '🗺️ Missions' }, { id: 'leaderboard', label: '🏆 Board' }].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} style={{ flex: 1, padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: activeTab === t.id ? 700 : 500, color: activeTab === t.id ? HUNT_PRIMARY : '#6B7280', borderBottom: activeTab === t.id ? `2.5px solid ${HUNT_PRIMARY}` : '2.5px solid transparent', transition: 'all 0.15s' }}>
             {t.label}
           </button>
@@ -598,7 +572,6 @@ export default function ScavengerHunt({ user }) {
       )}
 
       {activeTab === 'leaderboard' && <LeaderboardTab huntData={huntData} user={user} />}
-      {activeTab === 'feed' && <FeedTab feedItems={huntData.feedItems} />}
 
       {/* ── Mission Detail ── */}
       {selectedMission && !completing && (

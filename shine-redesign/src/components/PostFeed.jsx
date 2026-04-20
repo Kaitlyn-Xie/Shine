@@ -467,6 +467,60 @@ function WeeklyPromptBanner({ user, onRespond }) {
   )
 }
 
+// ── Hunt Feed helpers ─────────────────────────────────────────────────────────
+
+const HUNT_GREEN = '#1B8757'
+const HUNT_LIGHT = '#E8F8F0'
+
+function readHuntFeedItems() {
+  try {
+    const raw = localStorage.getItem('shine_hunt_v1')
+    return JSON.parse(raw || 'null')?.feedItems ?? []
+  } catch { return [] }
+}
+
+function HuntPostCard({ item, index }) {
+  return (
+    <div
+      className="fade-in"
+      style={{
+        background: '#fff',
+        borderRadius: 14,
+        overflow: 'hidden',
+        boxShadow: '0 2px 10px rgba(27,135,87,0.13)',
+        border: `2px solid ${HUNT_GREEN}`,
+        animationDelay: `${index * 0.07}s`,
+        position: 'relative',
+      }}
+    >
+      {/* Green "Hunt" badge */}
+      <div style={{
+        position: 'absolute', top: 8, left: 8, zIndex: 2,
+        background: HUNT_GREEN, color: '#fff',
+        fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 8,
+        letterSpacing: '0.3px',
+      }}>
+        🗺️ HUNT
+      </div>
+
+      {item.photoUrl ? (
+        <img src={item.photoUrl} alt="" style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block', background: HUNT_LIGHT }} />
+      ) : (
+        <div style={{ width: '100%', height: 100, background: HUNT_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
+          🗺️
+        </div>
+      )}
+
+      <div style={{ padding: '9px 10px 10px' }}>
+        <p style={{ fontSize: 12, lineHeight: 1.5, color: '#1A1A1A', fontWeight: 600, marginBottom: 4 }}>
+          {item.missionTitle}
+        </p>
+        <span style={{ fontSize: 10, color: HUNT_GREEN, fontWeight: 700 }}>{item.time}</span>
+      </div>
+    </div>
+  )
+}
+
 // ── Sub-view: Community Feed ──────────────────────────────────────────────────
 
 function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
@@ -475,9 +529,9 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [editingPost, setEditingPost] = useState(null)
+  const [feedFilter, setFeedFilter] = useState('community') // 'community' | 'hunt'
 
   const userPostIds = new Set(userPosts.map(p => p.id))
-
   const allPosts = [...userPosts, ...INIT_POSTS]
 
   const toggleLike = (id) => {
@@ -497,13 +551,18 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
   const left  = filtered.filter((_, i) => i % 2 === 0)
   const right = filtered.filter((_, i) => i % 2 === 1)
 
+  // Hunt feed items (read fresh each render from localStorage)
+  const huntItems = readHuntFeedItems()
+  const huntLeft  = huntItems.filter((_, i) => i % 2 === 0)
+  const huntRight = huntItems.filter((_, i) => i % 2 === 1)
+
   return (
     <>
       {/* Header */}
       <PageHeader
         title="Community Feed"
         icon={<HeartIcon size={18} color="var(--orange)" />}
-        action={<button style={smallBtn} onClick={() => setShowCreate(true)}>+ Post</button>}
+        action={feedFilter === 'community' ? <button style={smallBtn} onClick={() => setShowCreate(true)}>+ Post</button> : null}
       />
 
       {/* Create post sheet */}
@@ -525,30 +584,80 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
         />
       )}
 
-      {/* Weekly Prompt */}
-      <WeeklyPromptBanner user={user} onRespond={() => setShowCreate(true)} />
+      {/* Filter toggle */}
+      <div style={{
+        display: 'flex', gap: 8, padding: '10px 12px 8px',
+        background: '#fff', borderBottom: '1px solid var(--border)',
+      }}>
+        {[
+          { id: 'community', label: '💬 Community Feed' },
+          { id: 'hunt',      label: '🗺️ Scavenger Hunt' },
+        ].map(f => (
+          <button
+            key={f.id}
+            onClick={() => setFeedFilter(f.id)}
+            style={{
+              flex: 1, padding: '8px 0', border: 'none', borderRadius: 10, cursor: 'pointer',
+              fontSize: 12, fontWeight: 700,
+              background: feedFilter === f.id
+                ? (f.id === 'hunt' ? HUNT_GREEN : 'var(--orange)')
+                : '#F3F4F6',
+              color: feedFilter === f.id ? '#fff' : '#6B7280',
+              transition: 'all 0.15s',
+            }}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
 
-      {/* Search bar */}
-      <SearchBar
-        value={search}
-        onChange={setSearch}
-        placeholder="Search posts…"
-      />
+      {feedFilter === 'community' && (
+        <>
+          {/* Weekly Prompt */}
+          <WeeklyPromptBanner user={user} onRespond={() => setShowCreate(true)} />
 
-      {filtered.length === 0 && (
-        <div style={{ textAlign: 'center', padding: '40px 20px', color: '#AAAAAA', fontSize: 14 }}>
-          No posts match your search.
-        </div>
+          {/* Search bar */}
+          <SearchBar value={search} onChange={setSearch} placeholder="Search posts…" />
+
+          {filtered.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '40px 20px', color: '#AAAAAA', fontSize: 14 }}>
+              No posts match your search.
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '12px 10px 100px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {left.map((p, i)  => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07} extraLikes={localLikes[p.id] ?? 0} onEdit={userPostIds.has(p.id) ? () => setEditingPost(p) : null} />)}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 28 }}>
+              {right.map((p, i) => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07 + 0.04} extraLikes={localLikes[p.id] ?? 0} onEdit={userPostIds.has(p.id) ? () => setEditingPost(p) : null} />)}
+            </div>
+          </div>
+        </>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '12px 10px 100px' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {left.map((p, i)  => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07} extraLikes={localLikes[p.id] ?? 0} onEdit={userPostIds.has(p.id) ? () => setEditingPost(p) : null} />)}
+      {feedFilter === 'hunt' && (
+        <div style={{ padding: '12px 10px 100px' }}>
+          {huntItems.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 24px', color: '#AAAAAA' }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
+              <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6, color: '#4A4A4A' }}>No hunt photos yet</div>
+              <div style={{ fontSize: 13, lineHeight: 1.6 }}>
+                Complete scavenger hunt missions and choose "Share to feed" to see photos here.
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {huntLeft.map((item, i)  => <HuntPostCard key={i} item={item} index={i} />)}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 28 }}>
+                {huntRight.map((item, i) => <HuntPostCard key={i} item={item} index={i} />)}
+              </div>
+            </div>
+          )}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 28 }}>
-          {right.map((p, i) => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07 + 0.04} extraLikes={localLikes[p.id] ?? 0} onEdit={userPostIds.has(p.id) ? () => setEditingPost(p) : null} />)}
-        </div>
-      </div>
+      )}
     </>
   )
 }
