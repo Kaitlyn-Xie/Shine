@@ -5,8 +5,10 @@ import { CONTENT_ITEMS, TYPE_CONFIG } from '../data'
 // Show a small selection of content from the shared data as "my posts"
 const MY_POSTS = CONTENT_ITEMS.filter(item => ['Mei Lin', 'Lucas M.', 'Ji-ho P.', 'Omar K.'].includes(item.username)).slice(0, 4)
 
-export default function Profile({ user = {}, onBack, onSignOut }) {
+export default function Profile({ user = {}, onBack, onSignOut, onUpdate }) {
   const [activeType, setActiveType] = useState('all')
+
+  const toggleOnCampus = () => onUpdate?.({ isOnCampus: !user.isOnCampus })
 
   const displayName = user.name || 'Your Name'
   const initials = displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -71,6 +73,39 @@ export default function Profile({ user = {}, onBack, onSignOut }) {
                 ))}
               </div>
             )}
+          </div>
+
+          {/* On Campus Toggle */}
+          <div onClick={toggleOnCampus} style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            marginTop: 16, padding: '13px 16px',
+            background: user.isOnCampus ? '#FFFBF0' : '#F7F7F7',
+            borderRadius: 14,
+            border: `1.5px solid ${user.isOnCampus ? 'var(--yellow)' : 'var(--border)'}`,
+            cursor: 'pointer',
+          }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: user.isOnCampus ? 'var(--orange)' : '#4A4A4A' }}>
+                {user.isOnCampus ? "🏛️  I'm on campus" : '✈️  Pre-arrival'}
+              </div>
+              <div style={{ fontSize: 12, color: '#AAAAAA', marginTop: 2 }}>
+                {user.isOnCampus ? 'Tap to switch to pre-arrival mode' : 'Tap when you arrive at Harvard'}
+              </div>
+            </div>
+            {/* Toggle pill */}
+            <div style={{
+              width: 44, height: 26, borderRadius: 13, flexShrink: 0,
+              background: user.isOnCampus ? 'linear-gradient(135deg, #FFC94A, #FF9A3C)' : '#DDDDDD',
+              position: 'relative', transition: 'background 0.2s',
+            }}>
+              <div style={{
+                position: 'absolute', top: 3,
+                left: user.isOnCampus ? 21 : 3,
+                width: 20, height: 20, borderRadius: '50%',
+                background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+                transition: 'left 0.2s',
+              }} />
+            </div>
           </div>
 
           {/* Stats */}

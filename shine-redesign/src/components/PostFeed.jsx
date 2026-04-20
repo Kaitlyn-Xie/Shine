@@ -361,6 +361,112 @@ function InlineMapPicker({ initialPin, onConfirm, onCancel }) {
   )
 }
 
+// ── Weekly Prompts ────────────────────────────────────────────────────────────
+
+const PRE_ARRIVAL_PROMPTS = [
+  { category: 'Hometown & Everyday Life', prompt: '"This is home" — Share a photo of a place that feels like home to you (your street, favourite café, room, park) and tell us why it\'s special.' },
+  { category: 'Hometown & Everyday Life', prompt: '"Your daily view" — Share a photo taken right outside your window.' },
+  { category: 'Hometown & Everyday Life', prompt: '"Local flavor" — Share a photo or recipe of your favourite local dish.' },
+  { category: 'Hometown & Everyday Life', prompt: 'Hidden gem — A place in your hometown that isn\'t well-known but you love.' },
+  { category: 'Culture & Traditions', prompt: 'Celebration moment — Share a photo from a local celebration or your country\'s public holiday.' },
+  { category: 'Culture & Traditions', prompt: 'Casual dress & style — Share a photo of your everyday style.' },
+  { category: 'Culture & Traditions', prompt: 'Language — Share a short greeting in your language and teach us how to say it!' },
+  { category: 'Culture & Traditions', prompt: 'Story of my name — Explain your name and its origins. How do you pronounce it?' },
+  { category: 'Preparing to Say Goodbye', prompt: 'What are you most nervous about before you leave?' },
+  { category: 'Preparing to Say Goodbye', prompt: 'What are you most excited about for your time at Harvard?' },
+  { category: 'Preparing to Say Goodbye', prompt: 'Bucket list of "lasts" — What do you want to do before you depart?' },
+  { category: 'Preparing to Say Goodbye', prompt: 'What expectations or questions do you have about your new experience?' },
+  { category: 'Preparing to Say Goodbye', prompt: 'Farewell experience — How are you saying goodbye, and did you receive any special farewell gifts?' },
+  { category: 'Preparing to Say Goodbye', prompt: '"What are you bringing from home?" — Share a photo of something that will remind you of home.' },
+  { category: 'Preparation Tips', prompt: 'Packing hacks — What\'s the one packing tip you\'d share with everyone?' },
+  { category: 'Preparation Tips', prompt: 'Information you\'re checking — What resources are you using to prepare?' },
+  { category: 'Preparation Tips', prompt: 'Budgeting & finance — How are you planning your finances for this big move?' },
+  { category: 'Preparation Tips', prompt: 'Advice for your future self — What do you wish you could tell yourself once you arrive?' },
+  { category: 'Preparation Tips', prompt: 'Support network — What will you do to stay connected and supported while abroad?' },
+  { category: 'Journey to Campus', prompt: '"How I got to campus" — Share a photo of the modes of transportation you took to get here.' },
+]
+
+const ON_CAMPUS_PROMPTS = [
+  { category: 'First Impressions', prompt: 'First day on campus — What was the very first thing you noticed?' },
+  { category: 'First Impressions', prompt: 'First meal in the US — What did you eat, and what did you think?' },
+  { category: 'First Impressions', prompt: 'Your dorm — Show us your new home!' },
+  { category: 'First Impressions', prompt: 'Something that surprised you about campus life.' },
+  { category: 'First Impressions', prompt: 'Campus landmark — Share your first visit to a Harvard landmark.' },
+  { category: 'First Impressions', prompt: 'An interesting local experience you\'ve had since arriving.' },
+  { category: 'New Learning Experiences', prompt: 'Class — Share something interesting from your first week of classes.' },
+  { category: 'New Learning Experiences', prompt: 'Study spot — Where do you study best on (or off) campus?' },
+  { category: 'New Learning Experiences', prompt: 'Classroom culture — Share something about the teaching style that surprised you.' },
+  { category: 'New Learning Experiences', prompt: 'A new subject you\'re learning about that you never studied before.' },
+  { category: 'New Learning Experiences', prompt: 'Academic tips — What advice would you give yourself or a future student?' },
+  { category: 'New Learning Experiences', prompt: 'Words of encouragement for your fellow international students.' },
+  { category: 'Adjusting to American Culture', prompt: 'Your culture shock moment — What caught you most off guard?' },
+  { category: 'Adjusting to American Culture', prompt: 'Something familiar you found here that felt like home.' },
+  { category: 'Adjusting to American Culture', prompt: 'Something strange about American daily life you\'ve noticed.' },
+  { category: 'Adjusting to American Culture', prompt: 'An American habit you\'ve observed.' },
+  { category: 'Adjusting to American Culture', prompt: 'A habit of yours that others have noticed or commented on.' },
+  { category: 'Adjusting to American Culture', prompt: 'A new or surprising way you\'ve heard a particular English word used.' },
+  { category: 'Everyday Moments', prompt: 'Connecting with friends back home — How do you stay in touch?' },
+  { category: 'Everyday Moments', prompt: 'Your new daily view — Out your dorm window or on your walk to class.' },
+  { category: 'Everyday Moments', prompt: 'Favourite on-campus spot.' },
+  { category: 'Everyday Moments', prompt: 'Favourite off-campus spot.' },
+  { category: 'Everyday Moments', prompt: 'What you\'re up to on the weekends.' },
+  { category: 'Everyday Moments', prompt: 'New food adventures — What have you tried that you\'d never had before?' },
+  { category: 'Everyday Moments', prompt: 'Your new routine — What does a typical weekday look like for you now?' },
+  { category: 'Reflections & Tips', prompt: 'What you wish you had known before coming to Harvard.' },
+  { category: 'Reflections & Tips', prompt: 'Best packing advice — What would you tell someone packing for the first time?' },
+  { category: 'Reflections & Tips', prompt: 'Budgeting reality — How is the financial side going so far?' },
+  { category: 'Reflections & Tips', prompt: 'Stress & self-care — Share a resource, habit, or tip that helps you.' },
+  { category: 'Reflections & Tips', prompt: 'What are you most proud of since arriving?' },
+  { category: 'Reflections & Tips', prompt: 'Advice for future incoming international students — what would you say?' },
+]
+
+function WeeklyPromptBanner({ user, onRespond }) {
+  const prompts = user.isOnCampus ? ON_CAMPUS_PROMPTS : PRE_ARRIVAL_PROMPTS
+  const weekNum = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000))
+  const { category, prompt } = prompts[weekNum % prompts.length]
+  const modeLabel = user.isOnCampus ? 'On Campus' : 'Pre-Arrival'
+  const modeColor = user.isOnCampus ? '#A84B00' : '#555'
+  const modeBg   = user.isOnCampus ? '#FFE8C0' : '#EEEEEE'
+
+  return (
+    <div style={{
+      margin: '0 14px 12px',
+      background: 'linear-gradient(135deg, #FFF8E8 0%, #FFF0D0 100%)',
+      border: '1.5px solid #FFD87A',
+      borderRadius: 18,
+      padding: '14px 16px',
+      boxShadow: '0 2px 12px rgba(255,180,60,0.13)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <span style={{ fontSize: 17 }}>✨</span>
+        <span style={{ fontWeight: 800, fontSize: 13, color: '#B86A00', flex: 1 }}>Weekly Prompt</span>
+        <span style={{
+          fontSize: 10, fontWeight: 700, color: modeColor,
+          background: modeBg, borderRadius: 20, padding: '3px 9px',
+        }}>{modeLabel}</span>
+      </div>
+      <div style={{
+        fontSize: 11, fontWeight: 700, color: '#AAAAAA',
+        letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: 6,
+      }}>{category}</div>
+      <p style={{ fontSize: 14, lineHeight: 1.55, color: '#2A2A2A', margin: '0 0 12px', fontWeight: 500 }}>
+        {prompt}
+      </p>
+      <button
+        onClick={onRespond}
+        style={{
+          width: '100%', padding: '10px 0', border: 'none', borderRadius: 12,
+          background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
+          fontSize: 13, fontWeight: 800, color: '#fff', cursor: 'pointer',
+          boxShadow: '0 2px 8px rgba(255,154,60,0.3)',
+        }}
+      >
+        ✍️ Respond to this prompt
+      </button>
+    </div>
+  )
+}
+
 // ── Sub-view: Community Feed ──────────────────────────────────────────────────
 
 function FeedView({ userPosts = [], onNewPost, user = {} }) {
@@ -405,6 +511,9 @@ function FeedView({ userPosts = [], onNewPost, user = {} }) {
           onSubmit={(post) => { onNewPost && onNewPost(post); setShowCreate(false) }}
         />
       )}
+
+      {/* Weekly Prompt */}
+      <WeeklyPromptBanner user={user} onRespond={() => setShowCreate(true)} />
 
       {/* Search bar */}
       <SearchBar

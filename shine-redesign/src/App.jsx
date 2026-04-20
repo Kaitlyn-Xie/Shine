@@ -58,8 +58,14 @@ export default function App() {
 
   const handleNewPost = (post) => setCommunityPosts(prev => [post, ...prev])
 
+  const handleUpdateUser = (updates) => {
+    const updated = { ...user, ...updates }
+    localStorage.setItem('shine_user', JSON.stringify(updated))
+    setUser(updated)
+  }
+
   const renderScreen = () => {
-    if (showProfile) return <Profile user={user} onBack={() => setShowProfile(false)} onSignOut={() => { localStorage.removeItem('shine_user'); setUser(null); setShowProfile(false) }} />
+    if (showProfile) return <Profile user={user} onBack={() => setShowProfile(false)} onUpdate={handleUpdateUser} onSignOut={() => { localStorage.removeItem('shine_user'); setUser(null); setShowProfile(false) }} />
     switch (tab) {
       case 'map':  return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} />
       case 'post': return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} user={user} />
