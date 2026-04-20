@@ -36,12 +36,12 @@ const INIT_POSTS = [
 
 // ── Root ─────────────────────────────────────────────────────────────────────
 
-export default function PostFeed({ view = 'feed', onShowFAQ, userPosts = [], onNewPost, user = {}, sunlightPosts = [], onNewSunlightPost }) {
+export default function PostFeed({ view = 'feed', onShowFAQ, userPosts = [], onNewPost, user = {}, sunlightPosts = [], onNewSunlightPost, onEditSunlightPost }) {
   const questionPosts = sunlightPosts.filter(p => p.type === 'question')
   return (
     <div className="fade-in">
       {view === 'faq'  && <FAQView />}
-      {view === 'cq'   && <CommunityQView onShowFAQ={onShowFAQ} questionPosts={questionPosts} onNewQuestion={onNewSunlightPost} user={user} />}
+      {view === 'cq'   && <CommunityQView onShowFAQ={onShowFAQ} questionPosts={questionPosts} onNewQuestion={onNewSunlightPost} onEditSunlightPost={onEditSunlightPost} user={user} />}
       {view === 'feed' && <FeedView userPosts={userPosts} onNewPost={onNewPost} user={user} />}
     </div>
   )
@@ -208,7 +208,82 @@ function AskQuestionSheet({ onClose, onSubmit }) {
 
 // ── Question Card ─────────────────────────────────────────────────────────────
 
-function QuestionCard({ q, liked, onLike, expanded, onToggle, answers, answerDraft, onDraftChange, onAnswer, answerAnon, onAnswerAnonChange }) {
+function EditQuestionSheet({ q, onClose, onSave }) {
+  const [title, setTitle] = useState(q.title || '')
+  const [body, setBody] = useState(q.body || '')
+  const [anon, setAnon] = useState(q.isAnonymous || false)
+  const [saving, setSaving] = useState(false)
+  const canSave = title.trim().length > 2
+
+  const handleSave = async () => {
+    if (!canSave || saving) return
+    setSaving(true)
+    try {
+      await onSave({ title: title.trim(), body: body.trim(), isAnonymous: anon })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 300 }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="slide-up" style={{ background: '#fff', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 430, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: 40, height: 4, background: '#E0E0E0', borderRadius: 2, margin: '12px auto 0' }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
+          <span style={{ fontSize: 17, fontWeight: 800 }}>Edit Question</span>
+          <button onClick={onClose} style={iconBtn}><CloseIcon size={20} color="#4A4A4A" /></button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', background: anon ? '#F8F8F8' : '#fff' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A' }}>Post anonymously</div>
+            <div style={{ fontSize: 12, color: '#AAAAAA' }}>Your name won't be visible</div>
+          </div>
+          <button
+            onClick={() => setAnon(v => !v)}
+            style={{ width: 48, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer', background: anon ? QC : '#D0D0D0', transition: 'background 0.2s', position: 'relative', flexShrink: 0 }}
+          >
+            <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: anon ? 23 : 3, transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+          </button>
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px 32px' }}>
+          <textarea
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Your question…"
+            maxLength={300}
+            rows={3}
+            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 15, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit', resize: 'none', marginBottom: 12, boxSizing: 'border-box' }}
+          />
+          <textarea
+            value={body}
+            onChange={e => setBody(e.target.value)}
+            placeholder="Add more details (optional)…"
+            maxLength={600}
+            rows={3}
+            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 14, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit', resize: 'none', marginBottom: 16, boxSizing: 'border-box' }}
+          />
+          <button
+            onClick={handleSave}
+            disabled={!canSave || saving}
+            style={{
+              width: '100%', padding: 14, border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700,
+              cursor: canSave && !saving ? 'pointer' : 'default',
+              background: canSave && !saving ? `linear-gradient(135deg, ${QC}, #3377CC)` : 'var(--border)',
+              color: canSave && !saving ? '#fff' : '#AAAAAA',
+            }}
+          >
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function QuestionCard({ q, liked, onLike, expanded, onToggle, answers, answerDraft, onDraftChange, onAnswer, answerAnon, onAnswerAnonChange, onEdit }) {
   return (
     <div className="fade-in" style={{ background: '#fff', borderRadius: 16, boxShadow: 'var(--shadow)', marginBottom: 12, overflow: 'hidden' }}>
       {/* Header */}
@@ -225,6 +300,18 @@ function QuestionCard({ q, liked, onLike, expanded, onToggle, answers, answerDra
           <span style={{ fontSize: 10, color: QC, background: QL, padding: '3px 8px', borderRadius: 8, flexShrink: 0, whiteSpace: 'nowrap' }}>
             📍 {q.location.label || q.location.name}
           </span>
+        )}
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', color: '#BBBBBB', flexShrink: 0, display: 'flex', alignItems: 'center' }}
+            title="Edit question"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
         )}
       </div>
 
@@ -330,7 +417,7 @@ function QuestionCard({ q, liked, onLike, expanded, onToggle, answers, answerDra
 
 // ── Sub-view: Community Questions ────────────────────────────────────────────
 
-function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, user = {} }) {
+function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, onEditSunlightPost, user = {} }) {
   const [search, setSearch] = useState('')
   const [showAsk, setShowAsk] = useState(false)
   const [liked, setLiked] = useState(new Set())
@@ -338,6 +425,7 @@ function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, user = {
   const [answers, setAnswers] = useState({})
   const [answerDrafts, setAnswerDrafts] = useState({})
   const [answerAnons, setAnswerAnons] = useState({})
+  const [editingQ, setEditingQ] = useState(null)
 
   // Normalise static seed questions
   const staticQuestions = INIT_COMMUNITY_QS.map(q => ({
@@ -356,6 +444,7 @@ function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, user = {
   const apiQuestions = [...questionPosts].reverse().map(p => ({
     id: p.id,
     dbId: p.dbId,
+    userId: p.userId,
     username: p.username,
     isAnonymous: p.isAnonymous,
     title: p.title,
@@ -438,6 +527,13 @@ function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, user = {
     setShowAsk(false)
   }
 
+  const handleEditSave = async (data) => {
+    if (!editingQ?.dbId) return
+    const updated = await api.updateSunlightPost(editingQ.dbId, data)
+    if (onEditSunlightPost) onEditSunlightPost(updated)
+    setEditingQ(null)
+  }
+
   return (
     <>
       <PageHeader
@@ -494,11 +590,13 @@ function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, user = {
             onAnswer={() => submitAnswer(q)}
             answerAnon={!!answerAnons[q.id]}
             onAnswerAnonChange={v => setAnswerAnons(prev => ({ ...prev, [q.id]: v }))}
+            onEdit={!q.isStatic && user?.id && q.userId === user.id ? () => setEditingQ(q) : null}
           />
         ))}
       </div>
 
       {showAsk && <AskQuestionSheet onClose={() => setShowAsk(false)} onSubmit={handleAsk} />}
+      {editingQ && <EditQuestionSheet q={editingQ} onClose={() => setEditingQ(null)} onSave={handleEditSave} />}
     </>
   )
 }

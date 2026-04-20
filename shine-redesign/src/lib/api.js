@@ -42,6 +42,7 @@ export const api = {
 
   getSunlightPosts: () => request("GET", "/sunlight-posts"),
   createSunlightPost: (post) => request("POST", "/sunlight-posts", post),
+  updateSunlightPost: (id, data) => request("PUT", `/sunlight-posts/${id}`, data),
   likeSunlightPost: (id) => request("POST", `/sunlight-posts/${id}/like`),
 
   getQuestionAnswers: (questionId) =>

@@ -99,6 +99,7 @@ function adaptSunlightPost(post: typeof shineSunlightPostsTable.$inferSelect) {
   return {
     id: `db-${post.id}`,
     dbId: post.id,
+    userId: post.userId,
     type: post.type,
     title: post.title,
     body: post.body,
@@ -336,6 +337,41 @@ router.post("/shine/sunlight-posts", async (req, res): Promise<void> => {
     .returning();
 
   res.status(201).json(adaptSunlightPost(post));
+});
+
+router.put("/shine/sunlight-posts/:id", async (req, res): Promise<void> => {
+  const tok = getSessionId(req);
+  if (!tok) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const user = await getShineUser(tok);
+  if (!user) { res.status(401).json({ error: "User not found" }); return; }
+
+  const id = parseInt(req.params.id as string, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid post id" }); return; }
+
+  const [existing] = await db
+    .select()
+    .from(shineSunlightPostsTable)
+    .where(eq(shineSunlightPostsTable.id, id))
+    .limit(1);
+
+  if (!existing) { res.status(404).json({ error: "Post not found" }); return; }
+  if (existing.userId !== user.id) { res.status(403).json({ error: "Not your post" }); return; }
+
+  const { title, body, isAnonymous } = req.body;
+  if (!title || !body) { res.status(400).json({ error: "title and body are required" }); return; }
+
+  const [updated] = await db
+    .update(shineSunlightPostsTable)
+    .set({
+      title: title.trim(),
+      body: body.trim(),
+      isAnonymous: isAnonymous === true,
+      username: isAnonymous ? existing.username : user.name,
+    })
+    .where(eq(shineSunlightPostsTable.id, id))
+    .returning();
+
+  res.json(adaptSunlightPost(updated));
 });
 
 router.post(

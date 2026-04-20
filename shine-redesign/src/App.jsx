@@ -176,7 +176,7 @@ export default function App() {
   const renderScreen = () => {
     switch (tab) {
       case 'map':     return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} sunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} />
-      case 'post':    return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} sunlightPosts={sunlightPosts} onNewSunlightPost={handleNewSunlightPost} />
+      case 'post':    return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} sunlightPosts={sunlightPosts} onNewSunlightPost={handleNewSunlightPost} onEditSunlightPost={handleEditSunlightPost} />
       case 'chat':    return <Chat />
       case 'profile': return <Profile user={user} onUpdate={handleUpdateUser} userPosts={communityPosts} userSunlightPosts={sunlightPosts} onSignOut={() => { localStorage.removeItem('shine_user'); localStorage.removeItem('shine_session'); setUser(null); setTab('map') }} />
       case 'hunt':    return <ScavengerHunt user={user} />
