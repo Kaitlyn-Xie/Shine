@@ -80,7 +80,7 @@ export default function Login({ onLogin }) {
             <label style={labelStyle}>Full Name</label>
             <input
               value={name} onChange={e => setName(e.target.value)}
-              placeholder="e.g. Mei Lin" autoFocus
+              placeholder="" autoFocus
               style={inputStyle}
             />
           </div>
@@ -91,7 +91,7 @@ export default function Login({ onLogin }) {
           <label style={labelStyle}>Email</label>
           <input
             value={email} onChange={e => setEmail(e.target.value)}
-            placeholder="you@college.harvard.edu" type="email"
+            placeholder="" type="email"
             autoFocus={mode === 'signin'}
             style={inputStyle}
           />
