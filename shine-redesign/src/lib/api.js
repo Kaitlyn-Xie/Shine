@@ -1,6 +1,8 @@
 const getBase = () => {
-  if (typeof window === "undefined") return "";
-  return `${window.location.origin}/api-server`;
+  if (typeof window === "undefined") return "http://localhost:8080";
+  // Route through the shine-live server which proxies /api/ → API server.
+  // Works regardless of how Replit's proxy handles path prefixes.
+  return `${window.location.origin}/Shine`;
 };
 
 function session() {
