@@ -33,22 +33,34 @@ function createPinIcon(type, selected = false) {
 }
 
 function createStoryPinIcon(post, selected = false) {
-  const s = selected ? 52 : 44
-  const border = selected ? 3 : 2
-  const emoji = post.mediaType === 'textcard' ? '✍️' : '📷'
+  const s = selected ? 50 : 42
+  const isText = post.mediaType === 'textcard'
+  const bg = isText ? 'linear-gradient(135deg,#CC66FF,#9933CC)' : 'linear-gradient(135deg,#3CB87A,#2A9060)'
+  const iconSvg = isText
+    ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="7" y2="10"/><line x1="15" y1="14" x2="7" y2="14"/><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`
+    : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`
   return L.divIcon({
-    html: `<div style="
-      width:${s}px;height:${s}px;border-radius:50%;
-      background:linear-gradient(135deg,#FFC94A,#FF9A3C);
-      border:${border}px solid #fff;
-      box-shadow:0 3px 14px rgba(255,154,60,0.55);
-      display:flex;align-items:center;justify-content:center;
-      font-size:${selected ? 22 : 18}px;
-      transition:all 0.2s;
-    ">${emoji}</div>`,
+    html: `
+      <div style="display:flex;flex-direction:column;align-items:center;">
+        <div style="
+          width:${s}px;height:${s}px;border-radius:14px;
+          background:${bg};
+          border:2.5px solid #fff;
+          box-shadow:0 3px 14px rgba(0,0,0,0.28);
+          display:flex;align-items:center;justify-content:center;
+          transition:all 0.2s;
+          transform:${selected ? 'scale(1.15)' : 'scale(1)'};
+        ">${iconSvg}</div>
+        <div style="
+          width:0;height:0;
+          border-left:6px solid transparent;border-right:6px solid transparent;
+          border-top:8px solid ${isText ? '#9933CC' : '#2A9060'};
+          margin-top:-1px;
+        "></div>
+      </div>`,
     className: '',
-    iconSize: [s, s],
-    iconAnchor: [s / 2, s / 2],
+    iconSize: [s, s + 9],
+    iconAnchor: [s / 2, s + 9],
   })
 }
 
@@ -87,7 +99,17 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
   const [search, setSearch] = useState('')
   const [editingPost, setEditingPost] = useState(null)
 
-  const storyPosts = communityPosts.filter(p => p.location)
+  const storyPosts = communityPosts.filter(p => p.location).filter(p => {
+    if (filter !== 'all' && filter !== 'photo') return false
+    if (search) {
+      const q = search.toLowerCase()
+      const inText    = (p.text    || '').toLowerCase().includes(q)
+      const inCaption = (p.caption || '').toLowerCase().includes(q)
+      const inLoc     = (p.location?.name || '').toLowerCase().includes(q)
+      if (!inText && !inCaption && !inLoc) return false
+    }
+    return true
+  })
   const sunlightPostIds = new Set(sunlightPosts.map(p => p.id))
 
   const searchRef = useRef(null)
