@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import { CloseIcon, PlusIcon, GlobeIcon, CheckIcon } from './Icons'
 import { TYPE_CONFIG } from '../data'
+import { BADGES } from '../data/missions'
+
+function readHuntData() {
+  try {
+    return JSON.parse(localStorage.getItem('shine_hunt_v1') || 'null') || { completions: [], badges: [], feedItems: [] }
+  } catch { return { completions: [], badges: [], feedItems: [] } }
+}
+
+const HUNT_GREEN = '#1B8757'
+const HUNT_LIGHT = '#E8F8F0'
 
 const CONCENTRATIONS = [
   'African and African American Studies', 'Anthropology', 'Applied Mathematics',
@@ -249,6 +259,12 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
   const interestTags = (user.interests || []).slice(0, 5)
 
   const allPosts = [...userSunlightPosts, ...userPosts]
+
+  // Hunt stats
+  const huntData = readHuntData()
+  const huntPoints = huntData.completions.reduce((sum, c) => sum + (c.pts?.total ?? c.pts ?? 0), 0)
+  const huntMissions = huntData.completions.length
+  const earnedBadges = BADGES.filter(b => huntData.badges.includes(b.id))
   const displayPosts =
     activeTab === 'community' ? userPosts
     : activeTab === 'sunlight' ? userSunlightPosts
@@ -374,6 +390,76 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
             ✏️ Edit Profile
           </button>
         </div>
+      </div>
+
+      {/* Scavenger Hunt Stats */}
+      <div style={{ margin: '0 0 10px', background: '#fff', padding: '16px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <span style={{ fontSize: 16 }}>🏆</span>
+          <span style={{ fontWeight: 800, fontSize: 15, color: '#1A1A1A' }}>Scavenger Hunt</span>
+          {!user.isOnCampus && (
+            <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#9A9A9A', background: '#F3F4F6', padding: '2px 8px', borderRadius: 8 }}>
+              🔒 Unlocks on arrival
+            </span>
+          )}
+        </div>
+
+        {/* Points + Missions + Badges row */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: earnedBadges.length > 0 ? 14 : 0 }}>
+          <div style={{
+            flex: 1, background: HUNT_LIGHT, borderRadius: 14, padding: '12px 0',
+            textAlign: 'center', border: `1.5px solid ${user.isOnCampus ? '#B2E8D0' : '#E5E7EB'}`,
+          }}>
+            <div style={{ fontWeight: 900, fontSize: 22, color: user.isOnCampus ? HUNT_GREEN : '#AAAAAA' }}>
+              {huntPoints}
+            </div>
+            <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginTop: 2 }}>Points</div>
+          </div>
+          <div style={{
+            flex: 1, background: HUNT_LIGHT, borderRadius: 14, padding: '12px 0',
+            textAlign: 'center', border: `1.5px solid ${user.isOnCampus ? '#B2E8D0' : '#E5E7EB'}`,
+          }}>
+            <div style={{ fontWeight: 900, fontSize: 22, color: user.isOnCampus ? HUNT_GREEN : '#AAAAAA' }}>
+              {huntMissions}
+            </div>
+            <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginTop: 2 }}>Missions</div>
+          </div>
+          <div style={{
+            flex: 1, background: HUNT_LIGHT, borderRadius: 14, padding: '12px 0',
+            textAlign: 'center', border: `1.5px solid ${user.isOnCampus ? '#B2E8D0' : '#E5E7EB'}`,
+          }}>
+            <div style={{ fontWeight: 900, fontSize: 22, color: user.isOnCampus ? HUNT_GREEN : '#AAAAAA' }}>
+              {earnedBadges.length}
+            </div>
+            <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginTop: 2 }}>Badges</div>
+          </div>
+        </div>
+
+        {/* Earned badge chips */}
+        {earnedBadges.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {earnedBadges.map(b => (
+              <div key={b.id} style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: HUNT_LIGHT, border: `1.5px solid #B2E8D0`,
+                borderRadius: 20, padding: '5px 12px',
+              }}>
+                <span style={{ fontSize: 16 }}>{b.emoji}</span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: HUNT_GREEN }}>{b.name}</div>
+                  <div style={{ fontSize: 10, color: '#6B7280' }}>+{b.points} pts</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Placeholder badges when none earned */}
+        {user.isOnCampus && earnedBadges.length === 0 && huntMissions === 0 && (
+          <div style={{ textAlign: 'center', padding: '8px 0 2px', color: '#AAAAAA', fontSize: 12 }}>
+            Complete missions to earn badges 🎖️
+          </div>
+        )}
       </div>
 
       {/* Filter tabs */}
