@@ -590,12 +590,7 @@ function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, onEditSu
             onAnswer={() => submitAnswer(q)}
             answerAnon={!!answerAnons[q.id]}
             onAnswerAnonChange={v => setAnswerAnons(prev => ({ ...prev, [q.id]: v }))}
-            onEdit={(() => {
-              if (q.isStatic) return null
-              const byId = user?.id && q.userId === user.id
-              const byName = !q.isAnonymous && user?.name && q.username === user.name
-              return (byId || byName) ? () => setEditingQ(q) : null
-            })()}
+            onEdit={!q.isStatic && user?.id && q.userId === user.id ? () => setEditingQ(q) : null}
           />
         ))}
       </div>
@@ -909,7 +904,7 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
   const [editingPost, setEditingPost] = useState(null)
   const [feedFilter, setFeedFilter] = useState('community') // 'community' | 'hunt'
 
-  const userPostIds = new Set(userPosts.map(p => p.id))
+  const userPostIds = new Set(userPosts.filter(p => user?.id && p.userId === user.id).map(p => p.id))
   const allPosts = [...userPosts, ...INIT_POSTS]
 
   const toggleLike = (id) => {
