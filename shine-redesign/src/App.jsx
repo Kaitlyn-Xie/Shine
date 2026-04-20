@@ -26,6 +26,8 @@ export default function App() {
   const [postView, setPostView] = useState('feed')
   const [showPostMenu, setShowPostMenu] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
+  const [communityPosts, setCommunityPosts] = useState([])
+  const [sunlightPosts, setSunlightPosts] = useState([])
 
   // ── Auth gates ──────────────────────────────────────────────────────────────
   if (!user) {
@@ -52,9 +54,6 @@ export default function App() {
   }
 
   const isMap = tab === 'map'
-
-  const [communityPosts, setCommunityPosts] = useState([])
-  const [sunlightPosts, setSunlightPosts] = useState([])
 
   const handleNewPost = (post) => setCommunityPosts(prev => [post, ...prev])
   const handleNewSunlightPost = (post) => setSunlightPosts(prev => [post, ...prev])
