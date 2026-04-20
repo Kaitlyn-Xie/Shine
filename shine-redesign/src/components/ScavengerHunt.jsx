@@ -85,8 +85,7 @@ function CompletionSheet({ mission, onClose, onComplete }) {
 
   const gpsOk = !mission.requiresGPS || gpsStatus === 'passed' || gpsStatus === 'warning'
   const photoOk = !mission.requiresPhoto || photoUrl !== null
-  const qrOk = !mission.requiresQR || qrConfirmed
-  const canSubmit = gpsOk && photoOk && qrOk
+  const canSubmit = gpsOk && photoOk
 
   const handleGPS = () => {
     setGpsStatus('checking')
@@ -217,16 +216,22 @@ function CompletionSheet({ mission, onClose, onComplete }) {
             </StepBlock>
           )}
 
-          {/* QR */}
+          {/* QR — Future Feature (greyed out) */}
           {mission.requiresQR && (
-            <StepBlock num={nextStep()} title="QR / NFC Verification" done={qrConfirmed} desc="Look for a QR code or NFC tag at the location and scan it.">
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }} onClick={() => setQrConfirmed(v => !v)}>
-                <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: qrConfirmed ? HUNT_PRIMARY : '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}>
-                  {qrConfirmed && <CheckIcon size={13} color="#fff" />}
+            <div style={{ marginBottom: 14, borderRadius: 14, border: '1.5px solid #E5E7EB', overflow: 'hidden', opacity: 0.5 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px 6px' }}>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, background: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#6B7280' }}>
+                  🔲
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 600 }}>I found and scanned the QR/NFC tag ✓</span>
+                <span style={{ fontWeight: 700, fontSize: 14, color: '#6B7280' }}>QR / NFC Verification</span>
+                <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#fff', background: '#9A9A9A', padding: '2px 8px', borderRadius: 8 }}>Future Feature</span>
               </div>
-            </StepBlock>
+              <div style={{ padding: '2px 14px 14px' }}>
+                <p style={{ fontSize: 12, color: '#9A9A9A', margin: 0 }}>
+                  QR code and NFC tag scanning will be available in a future update. This step is automatically skipped for now.
+                </p>
+              </div>
+            </div>
           )}
 
           {/* Text Answer */}
@@ -306,7 +311,7 @@ function MissionDetailSheet({ mission, isCompleted, onClose, onStart }) {
             {[
               mission.requiresGPS && '📍 GPS location check',
               mission.requiresPhoto && '📷 Upload a photo',
-              mission.requiresQR && '🔲 QR/NFC scan at location',
+              mission.requiresQR && '🔲 QR/NFC scan at location (coming soon)',
               mission.allowTextAnswer && ('✍️ ' + (mission.textPrompt || 'Short answer')),
             ].filter(Boolean).map((item, i) => (
               <div key={i} style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -362,7 +367,7 @@ function MissionCard({ mission, isCompleted, onTap }) {
         <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
           {mission.requiresGPS && <span style={verifyBadge}>📍 GPS</span>}
           {mission.requiresPhoto && <span style={verifyBadge}>📷 Photo</span>}
-          {mission.requiresQR && <span style={verifyBadge}>QR/NFC</span>}
+          {mission.requiresQR && <span style={{ ...verifyBadge, opacity: 0.5, color: '#9A9A9A' }}>🔲 QR/NFC (Soon)</span>}
           {mission.allowTextAnswer && <span style={verifyBadge}>✍️ Answer</span>}
         </div>
       </div>
