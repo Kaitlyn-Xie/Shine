@@ -55,8 +55,10 @@ export default function App() {
   const isMap = !showProfile && tab === 'map'
 
   const [communityPosts, setCommunityPosts] = useState([])
+  const [sunlightPosts, setSunlightPosts] = useState([])
 
   const handleNewPost = (post) => setCommunityPosts(prev => [post, ...prev])
+  const handleNewSunlightPost = (post) => setSunlightPosts(prev => [post, ...prev])
 
   const handleUpdateUser = (updates) => {
     const updated = { ...user, ...updates }
@@ -67,7 +69,7 @@ export default function App() {
   const renderScreen = () => {
     if (showProfile) return <Profile user={user} onBack={() => setShowProfile(false)} onUpdate={handleUpdateUser} onSignOut={() => { localStorage.removeItem('shine_user'); setUser(null); setShowProfile(false) }} />
     switch (tab) {
-      case 'map':  return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} />
+      case 'map':  return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} sunlightPosts={sunlightPosts} />
       case 'post': return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} user={user} />
       case 'chat': return <Chat />
       default:     return <MapHome communityPosts={communityPosts} />
@@ -124,7 +126,10 @@ export default function App() {
       {!showProfile && <BottomNav active={tab} onChange={handleTabChange} />}
 
       {showCreate && (
-        <CreateContent onClose={() => setShowCreate(false)} onSubmit={() => setShowCreate(false)} />
+        <CreateContent
+          onClose={() => setShowCreate(false)}
+          onSubmit={(post) => { handleNewSunlightPost(post); setShowCreate(false) }}
+        />
       )}
     </div>
   )
