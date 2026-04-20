@@ -1,4 +1,5 @@
-import { GridIcon, ChatIcon, UserIcon, SunIcon, TrophyIcon } from './Icons'
+import { GridIcon, ChatIcon, UserIcon, SunIcon } from './Icons'
+import trophyImg from '../assets/trophy.png'
 
 export default function BottomNav({ active, onChange, isOnCampus }) {
   const handleHuntClick = () => {
@@ -60,7 +61,18 @@ export default function BottomNav({ active, onChange, isOnCampus }) {
         }}
       >
         <div style={{ position: 'relative' }}>
-          <TrophyIcon size={22} color={active === 'hunt' && isOnCampus ? '#1B8757' : '#9A9A9A'} />
+          <div style={{
+            width: 24, height: 24,
+            backgroundColor: active === 'hunt' && isOnCampus ? '#1B8757' : '#9A9A9A',
+            WebkitMaskImage: `url(${trophyImg})`,
+            WebkitMaskSize: 'contain',
+            WebkitMaskRepeat: 'no-repeat',
+            WebkitMaskPosition: 'center',
+            maskImage: `url(${trophyImg})`,
+            maskSize: 'contain',
+            maskRepeat: 'no-repeat',
+            maskPosition: 'center',
+          }} />
           {!isOnCampus && (
             <span style={{ position: 'absolute', top: -4, right: -6, fontSize: 10, lineHeight: 1 }}>🔒</span>
           )}
