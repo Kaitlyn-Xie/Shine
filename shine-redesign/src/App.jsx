@@ -24,7 +24,6 @@ export default function App() {
   const [tab, setTab] = useState('map')
   const [postView, setPostView] = useState('feed')
   const [showPostMenu, setShowPostMenu] = useState(false)
-  const [showProfile, setShowProfile] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
 
   // ── Auth gates ──────────────────────────────────────────────────────────────
@@ -37,7 +36,6 @@ export default function App() {
 
   // ── Main app ─────────────────────────────────────────────────────────────────
   const handleTabChange = (id) => {
-    if (id === 'profile') { setShowProfile(true); return }
     if (id === 'post') {
       setShowPostMenu(v => !v)
       setTab('post')
@@ -52,7 +50,7 @@ export default function App() {
     setShowPostMenu(false)
   }
 
-  const isMap = !showProfile && tab === 'map'
+  const isMap = tab === 'map'
 
   const [communityPosts, setCommunityPosts] = useState([])
   const [sunlightPosts, setSunlightPosts] = useState([])
@@ -69,12 +67,12 @@ export default function App() {
   }
 
   const renderScreen = () => {
-    if (showProfile) return <Profile user={user} onBack={() => setShowProfile(false)} onUpdate={handleUpdateUser} onSignOut={() => { localStorage.removeItem('shine_user'); setUser(null); setShowProfile(false) }} />
     switch (tab) {
-      case 'map':  return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} sunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} />
-      case 'post': return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} />
-      case 'chat': return <Chat />
-      default:     return <MapHome communityPosts={communityPosts} />
+      case 'map':     return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} sunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} />
+      case 'post':    return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} />
+      case 'chat':    return <Chat />
+      case 'profile': return <Profile user={user} onUpdate={handleUpdateUser} userPosts={communityPosts} userSunlightPosts={sunlightPosts} onSignOut={() => { localStorage.removeItem('shine_user'); setUser(null); setTab('map') }} />
+      default:        return <MapHome communityPosts={communityPosts} />
     }
   }
 
@@ -125,7 +123,7 @@ export default function App() {
         </>
       )}
 
-      {!showProfile && <BottomNav active={tab} onChange={handleTabChange} />}
+      <BottomNav active={tab} onChange={handleTabChange} />
 
       {showCreate && (
         <CreateContent
