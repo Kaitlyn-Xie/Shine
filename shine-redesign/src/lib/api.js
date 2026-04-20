@@ -42,6 +42,11 @@ export const api = {
   createSunlightPost: (post) => request("POST", "/sunlight-posts", post),
   likeSunlightPost: (id) => request("POST", `/sunlight-posts/${id}/like`),
 
+  getQuestionAnswers: (questionId) =>
+    request("GET", `/sunlight-posts/${questionId}/answers`),
+  postQuestionAnswer: (questionId, body, isAnonymous = false) =>
+    request("POST", `/sunlight-posts/${questionId}/answers`, { body, isAnonymous }),
+
   getHuntStats: () => request("GET", "/hunt/stats"),
   completeHuntMission: (data) => request("POST", "/hunt/complete", data),
 };

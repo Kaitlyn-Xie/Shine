@@ -43,6 +43,7 @@ export const shineSunlightPostsTable = pgTable("shine_sunlight_posts", {
   locationLat: real("location_lat"),
   locationLng: real("location_lng"),
   locationLabel: text("location_label"),
+  isAnonymous: boolean("is_anonymous").notNull().default(false),
   likes: integer("likes").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -55,5 +56,16 @@ export const shineHuntCompletionsTable = pgTable("shine_hunt_completions", {
   ptsTotal: integer("pts_total").notNull().default(0),
   photoUrl: text("photo_url"),
   shareToFeed: boolean("share_to_feed").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const shineQuestionAnswersTable = pgTable("shine_question_answers", {
+  id: serial("id").primaryKey(),
+  questionId: integer("question_id").notNull(),
+  userId: integer("user_id").notNull(),
+  username: text("username").notNull(),
+  body: text("body").notNull(),
+  isAnonymous: boolean("is_anonymous").notNull().default(false),
+  likes: integer("likes").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

@@ -33,10 +33,10 @@ export default function App() {
   useEffect(() => {
     if (!user) return
     api.getFeedPosts()
-      .then(posts => setCommunityPosts(posts))
+      .then(posts => Array.isArray(posts) && setCommunityPosts(posts))
       .catch(() => {})
     api.getSunlightPosts()
-      .then(posts => setSunlightPosts(posts))
+      .then(posts => Array.isArray(posts) && setSunlightPosts(posts))
       .catch(() => {})
   }, [user?.email])
 
@@ -103,11 +103,15 @@ export default function App() {
   }
 
   const handleNewSunlightPost = async (post) => {
+    const realName = user.name || 'You'
+    const displayName = post.isAnonymous ? 'Anonymous' : realName
     const postWithUser = {
       ...post,
-      username: user.name || 'You',
-      initials: (user.name || 'YO').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
+      username: displayName,
+      isAnonymous: post.isAnonymous || false,
+      initials: post.isAnonymous ? null : (realName).split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase(),
       avatarBg: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
+      time: 'Just now',
     }
     setSunlightPosts(prev => [postWithUser, ...prev])
     try {
@@ -115,11 +119,12 @@ export default function App() {
         type: post.type,
         title: post.title,
         body: post.body,
+        isAnonymous: post.isAnonymous || false,
         locationLat: post.location?.lat || null,
         locationLng: post.location?.lng || null,
-        locationLabel: post.location?.label || null,
+        locationLabel: post.location?.label || post.location?.name || null,
       })
-      setSunlightPosts(prev => prev.map(p => p.id === post.id ? saved : p))
+      setSunlightPosts(prev => prev.map(p => p.id === postWithUser.id ? saved : p))
     } catch (e) {
       console.error('Failed to save sunlight post:', e)
     }
@@ -142,7 +147,7 @@ export default function App() {
   const renderScreen = () => {
     switch (tab) {
       case 'map':     return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} sunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} />
-      case 'post':    return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} />
+      case 'post':    return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} sunlightPosts={sunlightPosts} onNewSunlightPost={handleNewSunlightPost} />
       case 'chat':    return <Chat />
       case 'profile': return <Profile user={user} onUpdate={handleUpdateUser} userPosts={communityPosts} userSunlightPosts={sunlightPosts} onSignOut={() => { localStorage.removeItem('shine_user'); localStorage.removeItem('shine_session'); setUser(null); setTab('map') }} />
       case 'hunt':    return <ScavengerHunt user={user} />

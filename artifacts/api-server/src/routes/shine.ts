@@ -7,6 +7,7 @@ import {
   shineFeedPostsTable,
   shineSunlightPostsTable,
   shineHuntCompletionsTable,
+  shineQuestionAnswersTable,
 } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -94,6 +95,7 @@ function adaptFeedPost(post: typeof shineFeedPostsTable.$inferSelect) {
 }
 
 function adaptSunlightPost(post: typeof shineSunlightPostsTable.$inferSelect) {
+  const displayName = post.isAnonymous ? "Anonymous" : post.username;
   return {
     id: `db-${post.id}`,
     dbId: post.id,
@@ -108,8 +110,9 @@ function adaptSunlightPost(post: typeof shineSunlightPostsTable.$inferSelect) {
             label: post.locationLabel ?? "Campus",
           }
         : null,
-    username: post.username,
-    initials: toInitials(post.username),
+    username: displayName,
+    initials: post.isAnonymous ? null : toInitials(post.username),
+    isAnonymous: post.isAnonymous,
     avatarBg: "linear-gradient(135deg, #FFC94A, #FF9A3C)",
     likes: post.likes,
     comments: 0,
@@ -311,7 +314,7 @@ router.post("/shine/sunlight-posts", async (req, res): Promise<void> => {
   const user = await getShineUser(tok);
   if (!user) { res.status(401).json({ error: "User not found" }); return; }
 
-  const { type, title, body, locationLat, locationLng, locationLabel } = req.body;
+  const { type, title, body, locationLat, locationLng, locationLabel, isAnonymous } = req.body;
   if (!title || !body || !type) {
     res.status(400).json({ error: "type, title, and body are required" });
     return;
@@ -328,6 +331,7 @@ router.post("/shine/sunlight-posts", async (req, res): Promise<void> => {
       locationLat: locationLat ?? null,
       locationLng: locationLng ?? null,
       locationLabel: locationLabel ?? null,
+      isAnonymous: isAnonymous === true,
     })
     .returning();
 
@@ -349,6 +353,69 @@ router.post(
       .where(eq(shineSunlightPostsTable.id, id))
       .returning();
     res.json(adaptSunlightPost(updated));
+  },
+);
+
+// ── Question Answers ──────────────────────────────────────────────────────────
+
+router.get(
+  "/shine/sunlight-posts/:id/answers",
+  async (req, res): Promise<void> => {
+    const id = parseInt(req.params.id as string, 10);
+    const rows = await db
+      .select()
+      .from(shineQuestionAnswersTable)
+      .where(eq(shineQuestionAnswersTable.questionId, id))
+      .orderBy(shineQuestionAnswersTable.createdAt);
+    res.json(
+      rows.map((a) => ({
+        id: a.id,
+        username: a.isAnonymous ? "Anonymous" : a.username,
+        isAnonymous: a.isAnonymous,
+        body: a.body,
+        likes: a.likes,
+        time: formatTime(a.createdAt),
+        createdAt: a.createdAt.toISOString(),
+      })),
+    );
+  },
+);
+
+router.post(
+  "/shine/sunlight-posts/:id/answers",
+  async (req, res): Promise<void> => {
+    const tok = getSessionId(req);
+    if (!tok) { res.status(401).json({ error: "Not authenticated" }); return; }
+    const user = await getShineUser(tok);
+    if (!user) { res.status(401).json({ error: "User not found" }); return; }
+
+    const questionId = parseInt(req.params.id as string, 10);
+    const { body, isAnonymous } = req.body;
+    if (!body || !body.trim()) {
+      res.status(400).json({ error: "body is required" });
+      return;
+    }
+
+    const [answer] = await db
+      .insert(shineQuestionAnswersTable)
+      .values({
+        questionId,
+        userId: user.id,
+        username: user.name,
+        body: body.trim(),
+        isAnonymous: isAnonymous === true,
+      })
+      .returning();
+
+    res.status(201).json({
+      id: answer.id,
+      username: answer.isAnonymous ? "Anonymous" : answer.username,
+      isAnonymous: answer.isAnonymous,
+      body: answer.body,
+      likes: answer.likes,
+      time: "Just now",
+      createdAt: answer.createdAt.toISOString(),
+    });
   },
 );
 

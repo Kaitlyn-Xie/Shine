@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { api } from '../lib/api'
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -35,11 +36,12 @@ const INIT_POSTS = [
 
 // ── Root ─────────────────────────────────────────────────────────────────────
 
-export default function PostFeed({ view = 'feed', onShowFAQ, userPosts = [], onNewPost, user = {} }) {
+export default function PostFeed({ view = 'feed', onShowFAQ, userPosts = [], onNewPost, user = {}, sunlightPosts = [], onNewSunlightPost }) {
+  const questionPosts = sunlightPosts.filter(p => p.type === 'question')
   return (
     <div className="fade-in">
       {view === 'faq'  && <FAQView />}
-      {view === 'cq'   && <CommunityQView onShowFAQ={onShowFAQ} />}
+      {view === 'cq'   && <CommunityQView onShowFAQ={onShowFAQ} questionPosts={questionPosts} onNewQuestion={onNewSunlightPost} user={user} />}
       {view === 'feed' && <FeedView userPosts={userPosts} onNewPost={onNewPost} user={user} />}
     </div>
   )
@@ -91,25 +93,347 @@ function FAQView() {
   )
 }
 
+// ── Ask Question Sheet ────────────────────────────────────────────────────────
+
+const QC = '#5599EE'
+const QL = '#EEF4FF'
+
+function AskQuestionSheet({ onClose, onSubmit }) {
+  const [anon, setAnon] = useState(false)
+  const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
+  const [location, setLocation] = useState(null)
+  const [showMap, setShowMap] = useState(false)
+  const canPost = title.trim().length > 2
+
+  const handleSubmit = () => {
+    if (!canPost) return
+    onSubmit({ title: title.trim(), body: body.trim(), location, isAnonymous: anon })
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 300 }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="slide-up" style={{ background: '#fff', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 430, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+        {/* Drag handle */}
+        <div style={{ width: 40, height: 4, background: '#E0E0E0', borderRadius: 2, margin: '12px auto 0' }} />
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
+          <span style={{ fontSize: 17, fontWeight: 800 }}>Ask a Question</span>
+          <button onClick={onClose} style={iconBtn}><CloseIcon size={20} color="#4A4A4A" /></button>
+        </div>
+
+        {/* Anonymous toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)', background: anon ? '#F8F8F8' : '#fff' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A' }}>Ask anonymously</div>
+            <div style={{ fontSize: 12, color: '#AAAAAA' }}>Your name won't be visible to others</div>
+          </div>
+          <button
+            onClick={() => setAnon(v => !v)}
+            style={{
+              width: 48, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer',
+              background: anon ? QC : '#D0D0D0', transition: 'background 0.2s', position: 'relative', flexShrink: 0,
+            }}
+          >
+            <div style={{
+              width: 22, height: 22, borderRadius: '50%', background: '#fff',
+              position: 'absolute', top: 3, left: anon ? 23 : 3, transition: 'left 0.2s',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+            }} />
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px 32px' }}>
+          <textarea
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="What would you like to know?"
+            maxLength={300}
+            rows={3}
+            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 15, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit', resize: 'none', marginBottom: 12, boxSizing: 'border-box' }}
+          />
+          <textarea
+            value={body}
+            onChange={e => setBody(e.target.value)}
+            placeholder="Add more details (optional)…"
+            maxLength={600}
+            rows={3}
+            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 14, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit', resize: 'none', marginBottom: 16, boxSizing: 'border-box' }}
+          />
+
+          {/* Location picker */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#4A4A4A', marginBottom: 8 }}>
+              📍 Tag a location <span style={{ fontWeight: 400, color: '#AAAAAA' }}>(optional — shows on map)</span>
+            </div>
+            {location && !showMap && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: QL, border: `1.5px solid ${QC}30`, borderRadius: 10, padding: '8px 12px', marginBottom: 8 }}>
+                <span style={{ fontSize: 13, color: QC, flex: 1 }}>📍 {location.name}</span>
+                <button onClick={() => setLocation(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#AAAAAA', padding: 0 }}>✕</button>
+              </div>
+            )}
+            {showMap
+              ? <InlineMapPicker onConfirm={loc => { setLocation(loc); setShowMap(false) }} onCancel={() => setShowMap(false)} />
+              : (
+                <button
+                  onClick={() => setShowMap(true)}
+                  style={{ width: '100%', padding: '10px 14px', background: '#F8F8F8', border: '1.5px dashed #D0D0D0', borderRadius: 12, fontSize: 13, color: '#888', cursor: 'pointer', textAlign: 'left', boxSizing: 'border-box' }}
+                >
+                  {location ? '📍 Change location' : '🗺 Drop a pin on the map'}
+                </button>
+              )
+            }
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            disabled={!canPost}
+            style={{
+              width: '100%', padding: 14, border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: canPost ? 'pointer' : 'default',
+              background: canPost ? `linear-gradient(135deg, ${QC}, #3377CC)` : 'var(--border)', color: canPost ? '#fff' : '#AAAAAA',
+            }}
+          >
+            Post Question
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Question Card ─────────────────────────────────────────────────────────────
+
+function QuestionCard({ q, liked, onLike, expanded, onToggle, answers, answerDraft, onDraftChange, onAnswer, answerAnon, onAnswerAnonChange }) {
+  return (
+    <div className="fade-in" style={{ background: '#fff', borderRadius: 16, boxShadow: 'var(--shadow)', marginBottom: 12, overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{ padding: '14px 14px 0', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        {q.isAnonymous
+          ? <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#EFEFEF', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={17} color="#AAAAAA" /></div>
+          : <Avatar name={q.username} size={36} bg="linear-gradient(135deg, #B8D4FF, #5599EE)" />
+        }
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontWeight: 700, fontSize: 13 }}>{q.username}</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{q.time}</div>
+        </div>
+        {q.location && (
+          <span style={{ fontSize: 10, color: QC, background: QL, padding: '3px 8px', borderRadius: 8, flexShrink: 0, whiteSpace: 'nowrap' }}>
+            📍 {q.location.label || q.location.name}
+          </span>
+        )}
+      </div>
+
+      {/* Content */}
+      <div style={{ padding: '10px 14px 0' }}>
+        <p style={{ fontSize: 14, fontWeight: 600, lineHeight: 1.55, margin: '0 0 4px' }}>{q.title || q.question}</p>
+        {q.body && <p style={{ fontSize: 13, color: '#555', lineHeight: 1.55, margin: 0 }}>{q.body}</p>}
+      </div>
+
+      {/* Action row */}
+      <div style={{ padding: '10px 14px 14px', display: 'flex', alignItems: 'center', gap: 20 }}>
+        <button
+          onClick={onLike}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={liked ? '#E8415A' : 'none'} stroke={liked ? '#E8415A' : '#BBBBBB'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+          <span style={{ fontSize: 12, color: liked ? '#E8415A' : '#AAAAAA', fontWeight: liked ? 700 : 400 }}>
+            {(q.likes ?? 0) + (liked ? 1 : 0)}
+          </span>
+        </button>
+
+        <button
+          onClick={onToggle}
+          style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <MessageIcon size={15} color={expanded ? QC : '#BBBBBB'} />
+          <span style={{ fontSize: 12, color: expanded ? QC : '#AAAAAA', fontWeight: expanded ? 700 : 400 }}>
+            {answers.length > 0 ? `${answers.length} answer${answers.length !== 1 ? 's' : ''}` : 'Answer'}
+          </span>
+        </button>
+      </div>
+
+      {/* Expanded answers */}
+      {expanded && (
+        <div style={{ background: QL, borderTop: `1px solid ${QC}22`, padding: '14px' }}>
+          {answers.length === 0 && (
+            <div style={{ textAlign: 'center', color: '#AAAAAA', fontSize: 13, paddingBottom: 10 }}>
+              No answers yet. Be the first!
+            </div>
+          )}
+          {answers.map(a => (
+            <div key={a.id} style={{ marginBottom: 10, padding: '10px 12px', background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4 }}>
+                {a.isAnonymous
+                  ? <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#EFEFEF', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={12} color="#AAAAAA" /></div>
+                  : <Avatar name={a.username} size={26} bg="linear-gradient(135deg, #B8D4FF, #5599EE)" />
+                }
+                <span style={{ fontWeight: 700, fontSize: 12 }}>{a.username}</span>
+                <span style={{ fontSize: 11, color: '#AAAAAA', marginLeft: 'auto' }}>{a.time}</span>
+              </div>
+              <p style={{ fontSize: 13, lineHeight: 1.55, margin: 0, color: '#333' }}>{a.body}</p>
+            </div>
+          ))}
+
+          {/* Anonymous answer toggle */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <button
+              onClick={() => onAnswerAnonChange(!answerAnon)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none',
+                cursor: 'pointer', padding: 0, fontSize: 11, color: answerAnon ? QC : '#AAAAAA', fontWeight: answerAnon ? 700 : 400,
+              }}
+            >
+              <div style={{
+                width: 16, height: 16, borderRadius: '50%',
+                border: `2px solid ${answerAnon ? QC : '#CCCCCC'}`,
+                background: answerAnon ? QC : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {answerAnon && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+              </div>
+              Reply anonymously
+            </button>
+          </div>
+
+          {/* Answer input */}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input
+              value={answerDraft}
+              onChange={e => onDraftChange(e.target.value)}
+              placeholder="Write your answer…"
+              style={{ flex: 1, padding: '10px 12px', border: `1.5px solid ${QC}44`, borderRadius: 12, fontSize: 13, outline: 'none', fontFamily: 'inherit', background: '#fff' }}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), onAnswer())}
+            />
+            <button
+              onClick={onAnswer}
+              disabled={!answerDraft.trim()}
+              style={{
+                padding: '10px 14px', border: 'none', borderRadius: 12, fontWeight: 700, fontSize: 13, cursor: answerDraft.trim() ? 'pointer' : 'default',
+                background: answerDraft.trim() ? QC : '#E0E0E0', color: answerDraft.trim() ? '#fff' : '#AAAAAA',
+              }}
+            >
+              Post
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Sub-view: Community Questions ────────────────────────────────────────────
 
-function CommunityQView({ onShowFAQ }) {
-  const [questions, setQuestions] = useState(INIT_COMMUNITY_QS)
+function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, user = {} }) {
   const [search, setSearch] = useState('')
   const [showAsk, setShowAsk] = useState(false)
-  const [draft, setDraft] = useState('')
+  const [liked, setLiked] = useState(new Set())
+  const [expanded, setExpanded] = useState(null)
+  const [answers, setAnswers] = useState({})
+  const [answerDrafts, setAnswerDrafts] = useState({})
+  const [answerAnons, setAnswerAnons] = useState({})
 
-  const filtered = questions.filter(q =>
-    !search || q.question.toLowerCase().includes(search.toLowerCase())
+  // Normalise static seed questions
+  const staticQuestions = INIT_COMMUNITY_QS.map(q => ({
+    id: `static-${q.id}`,
+    username: q.anon ? 'Anonymous' : q.username,
+    isAnonymous: q.anon,
+    title: q.question,
+    body: null,
+    location: null,
+    likes: q.helpful,
+    time: q.time,
+    isStatic: true,
+  }))
+
+  // Normalise API-backed questions (newest first)
+  const apiQuestions = [...questionPosts].reverse().map(p => ({
+    id: p.id,
+    dbId: p.dbId,
+    username: p.username,
+    isAnonymous: p.isAnonymous,
+    title: p.title,
+    body: p.body || null,
+    location: p.location || null,
+    likes: p.likes,
+    time: p.time,
+    isStatic: false,
+  }))
+
+  const allQuestions = [...apiQuestions, ...staticQuestions]
+  const filtered = allQuestions.filter(q =>
+    !search || (q.title || '').toLowerCase().includes(search.toLowerCase())
   )
 
-  const submit = () => {
-    if (!draft.trim()) return
-    setQuestions(prev => [{
-      id: Date.now(), username: 'You', anon: false, initials: 'ME', country: '',
-      question: draft.trim(), answers: 0, helpful: 0, time: 'Just now',
-    }, ...prev])
-    setDraft('')
+  const loadAnswers = async (dbId) => {
+    if (answers[dbId] !== undefined) return
+    setAnswers(prev => ({ ...prev, [dbId]: [] }))
+    try {
+      const rows = await api.getQuestionAnswers(dbId)
+      setAnswers(prev => ({ ...prev, [dbId]: rows }))
+    } catch { /* ignore */ }
+  }
+
+  const toggleExpand = (q) => {
+    const isOpen = expanded === q.id
+    setExpanded(isOpen ? null : q.id)
+    if (!isOpen && q.dbId) loadAnswers(q.dbId)
+  }
+
+  const toggleLike = async (q) => {
+    setLiked(prev => {
+      const s = new Set(prev)
+      s.has(q.id) ? s.delete(q.id) : s.add(q.id)
+      return s
+    })
+    if (q.dbId) {
+      try { await api.likeSunlightPost(q.dbId) } catch { /* ignore */ }
+    }
+  }
+
+  const submitAnswer = async (q) => {
+    const text = (answerDrafts[q.id] || '').trim()
+    if (!text) return
+    const isAnon = !!answerAnons[q.id]
+    const optimistic = {
+      id: `opt-${Date.now()}`,
+      username: isAnon ? 'Anonymous' : (user.name || 'You'),
+      isAnonymous: isAnon,
+      body: text,
+      likes: 0,
+      time: 'Just now',
+    }
+    setAnswers(prev => ({ ...prev, [q.id]: [...(prev[q.id] ?? []), optimistic] }))
+    setAnswerDrafts(prev => ({ ...prev, [q.id]: '' }))
+    if (q.dbId) {
+      try {
+        const saved = await api.postQuestionAnswer(q.dbId, text, isAnon)
+        setAnswers(prev => ({
+          ...prev,
+          [q.id]: (prev[q.id] ?? []).map(a => a.id === optimistic.id ? saved : a),
+        }))
+      } catch { /* ignore */ }
+    }
+  }
+
+  const handleAsk = async (data) => {
+    if (onNewQuestion) {
+      await onNewQuestion({
+        type: 'question',
+        title: data.title,
+        body: data.body || data.title,
+        isAnonymous: data.isAnonymous,
+        location: data.location
+          ? { lat: data.location.lat, lng: data.location.lng, label: data.location.name, name: data.location.name }
+          : null,
+      })
+    }
     setShowAsk(false)
   }
 
@@ -133,10 +457,7 @@ function CommunityQView({ onShowFAQ }) {
               padding: '12px 16px', cursor: 'pointer', textAlign: 'left',
             }}
           >
-            <div style={{
-              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-              background: '#FF9A3C22', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>
+            <div style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: '#FF9A3C22', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <PinIcon size={18} color="#FF9A3C" />
             </div>
             <div style={{ flex: 1 }}>
@@ -150,12 +471,7 @@ function CommunityQView({ onShowFAQ }) {
         </div>
       )}
 
-      {/* Search bar */}
-      <SearchBar
-        value={search}
-        onChange={setSearch}
-        placeholder="Search questions…"
-      />
+      <SearchBar value={search} onChange={setSearch} placeholder="Search questions…" />
 
       <div style={{ padding: '12px 12px 100px' }}>
         {filtered.length === 0 && (
@@ -163,67 +479,25 @@ function CommunityQView({ onShowFAQ }) {
             No questions match your search.
           </div>
         )}
-        {filtered.map((q, i) => (
-          <div key={q.id} className="fade-in" style={{
-            background: '#fff', borderRadius: 'var(--radius)',
-            boxShadow: 'var(--shadow)', padding: 16, marginBottom: 12,
-            animationDelay: `${i * 0.05}s`,
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 10 }}>
-              {q.anon
-                ? <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#EFEFEF', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <UserIcon size={17} color="#AAAAAA" />
-                  </div>
-                : <Avatar name={q.username} size={34} bg="linear-gradient(135deg, #FFC94A, #FF9A3C)" />
-              }
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 13 }}>{q.username}</div>
-                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                  {q.country ? `${q.country} · ` : ''}{q.time}
-                </div>
-              </div>
-            </div>
-            <p style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 12 }}>{q.question}</p>
-            <div style={{ display: 'flex', gap: 16 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <MessageIcon size={14} color="#BBBBBB" />
-                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{q.answers} answers</span>
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                <ThumbsUpIcon size={14} color="#BBBBBB" />
-                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{q.helpful} helpful</span>
-              </span>
-            </div>
-          </div>
+        {filtered.map(q => (
+          <QuestionCard
+            key={q.id}
+            q={q}
+            liked={liked.has(q.id)}
+            onLike={() => toggleLike(q)}
+            expanded={expanded === q.id}
+            onToggle={() => toggleExpand(q)}
+            answers={answers[q.dbId ?? q.id] ?? (q.isStatic ? [] : [])}
+            answerDraft={answerDrafts[q.id] ?? ''}
+            onDraftChange={text => setAnswerDrafts(prev => ({ ...prev, [q.id]: text }))}
+            onAnswer={() => submitAnswer(q)}
+            answerAnon={!!answerAnons[q.id]}
+            onAnswerAnonChange={v => setAnswerAnons(prev => ({ ...prev, [q.id]: v }))}
+          />
         ))}
       </div>
 
-      {showAsk && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 300 }}
-          onClick={e => e.target === e.currentTarget && setShowAsk(false)}
-        >
-          <div className="slide-up" style={{ background: '#fff', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 430, padding: 24, paddingBottom: 40 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <span style={{ fontSize: 17, fontWeight: 800 }}>Ask a Question</span>
-              <button onClick={() => setShowAsk(false)} style={iconBtn}><CloseIcon size={20} color="#4A4A4A" /></button>
-            </div>
-            <textarea
-              value={draft}
-              onChange={e => setDraft(e.target.value)}
-              placeholder="What would you like to know?"
-              style={{ width: '100%', minHeight: 120, padding: 14, border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 15, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit', resize: 'none', marginBottom: 16 }}
-            />
-            <button
-              onClick={submit}
-              disabled={!draft.trim()}
-              style={{ width: '100%', padding: 14, background: draft.trim() ? 'linear-gradient(135deg, #FFC94A, #FF9A3C)' : 'var(--border)', border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700, cursor: draft.trim() ? 'pointer' : 'default' }}
-            >
-              Post Question
-            </button>
-          </div>
-        </div>
-      )}
+      {showAsk && <AskQuestionSheet onClose={() => setShowAsk(false)} onSubmit={handleAsk} />}
     </>
   )
 }
