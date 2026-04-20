@@ -78,7 +78,8 @@ function useBlockMapEvents(ref) {
   }, [ref])
 }
 
-export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts = [], onEditSunlightPost }) {
+export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts: sunlightPostsProp = [], onEditSunlightPost }) {
+  const sunlightPosts = Array.isArray(sunlightPostsProp) ? sunlightPostsProp : []
   const [filter, setFilter] = useState('all')
   const [selected, setSelected] = useState(null)
   const [selectedStory, setSelectedStory] = useState(null)
@@ -104,7 +105,9 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
     if (filter !== 'all' && item.type !== filter) return false
     if (search) {
       const q = search.toLowerCase()
-      if (!item.title.toLowerCase().includes(q) && !item.body.toLowerCase().includes(q)) return false
+      const inTitle = (item.title || '').toLowerCase().includes(q)
+      const inBody  = (item.body  || '').toLowerCase().includes(q)
+      if (!inTitle && !inBody) return false
     }
     return true
   })

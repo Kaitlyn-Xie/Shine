@@ -376,7 +376,7 @@ function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, user = {
     setAnswers(prev => ({ ...prev, [dbId]: [] }))
     try {
       const rows = await api.getQuestionAnswers(dbId)
-      setAnswers(prev => ({ ...prev, [dbId]: rows }))
+      setAnswers(prev => ({ ...prev, [dbId]: Array.isArray(rows) ? rows : [] }))
     } catch { /* ignore */ }
   }
 
@@ -401,6 +401,7 @@ function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, user = {
     const text = (answerDrafts[q.id] || '').trim()
     if (!text) return
     const isAnon = !!answerAnons[q.id]
+    const qKey = q.dbId ?? q.id
     const optimistic = {
       id: `opt-${Date.now()}`,
       username: isAnon ? 'Anonymous' : (user.name || 'You'),
@@ -409,14 +410,14 @@ function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, user = {
       likes: 0,
       time: 'Just now',
     }
-    setAnswers(prev => ({ ...prev, [q.id]: [...(prev[q.id] ?? []), optimistic] }))
+    setAnswers(prev => ({ ...prev, [qKey]: [...(prev[qKey] ?? []), optimistic] }))
     setAnswerDrafts(prev => ({ ...prev, [q.id]: '' }))
     if (q.dbId) {
       try {
         const saved = await api.postQuestionAnswer(q.dbId, text, isAnon)
         setAnswers(prev => ({
           ...prev,
-          [q.id]: (prev[q.id] ?? []).map(a => a.id === optimistic.id ? saved : a),
+          [qKey]: (prev[qKey] ?? []).map(a => a.id === optimistic.id ? saved : a),
         }))
       } catch { /* ignore */ }
     }
