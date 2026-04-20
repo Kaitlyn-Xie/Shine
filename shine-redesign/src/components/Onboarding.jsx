@@ -56,10 +56,11 @@ const CONCENTRATIONS = [
 ]
 
 const HOUSES = [
-  'Harvard Yard (Freshman)', 'Adams House', 'Cabot House', 'Currier House',
-  'Dunster House', 'Eliot House', 'Kirkland House', 'Leverett House',
-  'Lowell House', 'Mather House', 'Pforzheimer House', 'Quincy House',
-  'Winthrop House', 'Off-campus',
+  'Apley Court', 'Canaday Hall', 'Grays Hall', 'Greenough Hall',
+  'Hollis Hall', 'Holworthy Hall', 'Hurlbut Hall', 'Lionel Hall',
+  'Massachusetts Hall', 'Matthews Hall', 'Mower Hall', 'Pennypacker Hall',
+  'Stoughton Hall', 'Straus Hall', 'Thayer Hall', 'Weld Hall',
+  'Wigglesworth Hall',
 ]
 
 const YEARS = ['2028', '2027', '2026', '2025']
