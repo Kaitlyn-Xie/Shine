@@ -146,12 +146,12 @@ export const TYPE_CONFIG = {
   tip:      { color: '#FF9A3C', light: '#FFF5EE', label: 'Tip' },
   story:    { color: '#CC66FF', light: '#F8EEFF', label: 'Story' },
   resource: { color: '#3CB87A', light: '#EEFFF6', label: 'Resource' },
-  photo:    { color: '#3CB87A', light: '#EEFFF6', label: 'Photo' },
+  photo:    { color: '#00B4D8', light: '#E0F7FC', label: 'Photo' },
 }
 
 export const FILTERS = [
   { id: 'all',      label: 'All',       color: '#4A4A4A' },
-  { id: 'photo',    label: '📷 Photos', color: '#3CB87A' },
+  { id: 'photo',    label: '📷 Photos', color: '#00B4D8' },
   { id: 'question', label: 'Questions', color: '#5599EE' },
   { id: 'tip',      label: 'Tips',      color: '#FF9A3C' },
   { id: 'story',    label: 'Stories',   color: '#CC66FF' },

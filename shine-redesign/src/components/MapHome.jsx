@@ -35,7 +35,7 @@ function createPinIcon(type, selected = false) {
 function createStoryPinIcon(post, selected = false) {
   const s = selected ? 50 : 42
   const isText = post.mediaType === 'textcard'
-  const bg = isText ? 'linear-gradient(135deg,#CC66FF,#9933CC)' : 'linear-gradient(135deg,#3CB87A,#2A9060)'
+  const bg = isText ? 'linear-gradient(135deg,#CC66FF,#9933CC)' : 'linear-gradient(135deg,#00B4D8,#0088AA)'
   const iconSvg = isText
     ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="10" x2="7" y2="10"/><line x1="15" y1="14" x2="7" y2="14"/><path d="M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>`
     : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`
@@ -54,7 +54,7 @@ function createStoryPinIcon(post, selected = false) {
         <div style="
           width:0;height:0;
           border-left:6px solid transparent;border-right:6px solid transparent;
-          border-top:8px solid ${isText ? '#9933CC' : '#2A9060'};
+          border-top:8px solid ${isText ? '#9933CC' : '#0088AA'};
           margin-top:-1px;
         "></div>
       </div>`,
