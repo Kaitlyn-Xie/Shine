@@ -206,18 +206,94 @@ function EditProfileSheet({ user, onClose, onSave }) {
   )
 }
 
+// ── Edit post sheet (for question posts on profile) ──────────────────────────
+const QC = '#5599EE'
+
+function ProfileEditSheet({ post, onClose, onSave }) {
+  const [title, setTitle] = useState(post.title || '')
+  const [body, setBody] = useState(post.body || '')
+  const [anon, setAnon] = useState(post.isAnonymous || false)
+  const [saving, setSaving] = useState(false)
+  const canSave = title.trim().length > 2
+
+  const handleSave = async () => {
+    if (!canSave || saving) return
+    setSaving(true)
+    try { await onSave({ title: title.trim(), body: body.trim(), isAnonymous: anon }) }
+    finally { setSaving(false) }
+  }
+
+  return (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'flex-end', justifyContent: 'center', zIndex: 500 }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{ background: '#fff', borderRadius: '24px 24px 0 0', width: '100%', maxWidth: 430, maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: 40, height: 4, background: '#E0E0E0', borderRadius: 2, margin: '12px auto 0' }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', borderBottom: '1px solid var(--border)' }}>
+          <span style={{ fontSize: 17, fontWeight: 800 }}>Edit Question</span>
+          <button onClick={onClose} style={iconBtn}><CloseIcon size={20} color="#4A4A4A" /></button>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', borderBottom: '1px solid var(--border)', background: anon ? '#F8F8F8' : '#fff' }}>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#1A1A1A' }}>Post anonymously</div>
+            <div style={{ fontSize: 12, color: '#AAAAAA' }}>Your name won't be visible</div>
+          </div>
+          <button
+            onClick={() => setAnon(v => !v)}
+            style={{ width: 48, height: 28, borderRadius: 14, border: 'none', cursor: 'pointer', background: anon ? QC : '#D0D0D0', transition: 'background 0.2s', position: 'relative', flexShrink: 0 }}
+          >
+            <div style={{ width: 22, height: 22, borderRadius: '50%', background: '#fff', position: 'absolute', top: 3, left: anon ? 23 : 3, transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+          </button>
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px 32px' }}>
+          <textarea
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            placeholder="Your question…"
+            maxLength={300}
+            rows={3}
+            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 15, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit', resize: 'none', marginBottom: 12, boxSizing: 'border-box' }}
+          />
+          <textarea
+            value={body}
+            onChange={e => setBody(e.target.value)}
+            placeholder="Add more details (optional)…"
+            maxLength={600}
+            rows={3}
+            style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 14, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit', resize: 'none', marginBottom: 16, boxSizing: 'border-box' }}
+          />
+          <button
+            onClick={handleSave}
+            disabled={!canSave || saving}
+            style={{
+              width: '100%', padding: 14, border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700,
+              cursor: canSave && !saving ? 'pointer' : 'default',
+              background: canSave && !saving ? `linear-gradient(135deg, ${QC}, #3377CC)` : 'var(--border)',
+              color: canSave && !saving ? '#fff' : '#AAAAAA',
+            }}
+          >
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Post card for user's posts grid ─────────────────────────────────────────
-function UserPostCard({ post }) {
+function UserPostCard({ post, onEdit }) {
   const isSunlight = !!TYPE_CONFIG[post.type]
   const cfg = isSunlight ? TYPE_CONFIG[post.type] : null
   const gradIdx = (post.gradientIdx ?? 0) % GRAD_COLORS.length
   const [c1, c2] = cfg ? [cfg.light, cfg.light] : GRAD_COLORS[gradIdx]
 
   return (
-    <div style={{ background: '#fff', borderRadius: 14, boxShadow: 'var(--shadow)', overflow: 'hidden' }}>
+    <div style={{ background: '#fff', borderRadius: 14, boxShadow: 'var(--shadow)', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
       <div style={{
         height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: isSunlight ? cfg.light : `linear-gradient(135deg, ${c1}, ${c2})`,
+        position: 'relative',
       }}>
         {isSunlight ? (
           <span style={{
@@ -233,7 +309,7 @@ function UserPostCard({ post }) {
           </span>
         )}
       </div>
-      <div style={{ padding: '10px 12px' }}>
+      <div style={{ padding: '10px 12px', flex: 1 }}>
         <p style={{ fontSize: 12, fontWeight: 700, lineHeight: 1.4, marginBottom: 5, color: '#1A1A1A',
           overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
         }}>
@@ -244,14 +320,26 @@ function UserPostCard({ post }) {
           <span style={{ marginLeft: 6, color: '#AAAAAA' }}>· {post.time}</span>
         </div>
       </div>
+      {onEdit && (
+        <button
+          onClick={onEdit}
+          style={{
+            margin: '0 12px 12px', padding: '7px 0', borderRadius: 10, border: 'none',
+            background: '#EEF4FF', color: QC, fontSize: 12, fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          ✏️ Edit
+        </button>
+      )}
     </div>
   )
 }
 
 // ── Main Profile ─────────────────────────────────────────────────────────────
-export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPosts = [], userSunlightPosts = [] }) {
+export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPosts = [], userSunlightPosts = [], onEditSunlightPost }) {
   const [activeTab, setActiveTab] = useState('all')
   const [showEdit, setShowEdit] = useState(false)
+  const [editingPost, setEditingPost] = useState(null)
   const [huntData, setHuntData] = useState(readHuntData)
 
   useEffect(() => {
@@ -275,18 +363,32 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
   const initials = displayName.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
   const interestTags = (user.interests || []).slice(0, 5)
 
-  const allPosts = [...userSunlightPosts, ...userPosts]
+  // Only show posts created by this user
+  const myPosts = userPosts.filter(p => p.userId === user.id)
+  const mySunlightPosts = userSunlightPosts.filter(p => p.userId === user.id)
+  const allPosts = [...mySunlightPosts, ...myPosts]
 
   // Hunt stats
   const huntPoints = huntData.completions.reduce((sum, c) => sum + (c.pts?.total ?? c.pts ?? 0), 0)
   const huntMissions = huntData.completions.length
   const earnedBadges = BADGES.filter(b => huntData.badges.includes(b.id))
   const displayPosts =
-    activeTab === 'community' ? userPosts
-    : activeTab === 'sunlight' ? userSunlightPosts
+    activeTab === 'community' ? myPosts
+    : activeTab === 'sunlight' ? mySunlightPosts
     : allPosts
 
   const handleSaveProfile = (updates) => onUpdate?.(updates)
+
+  const handleSaveEdit = async (updates) => {
+    if (!editingPost) return
+    try {
+      const updated = await api.updateSunlightPost(editingPost.dbId, updates)
+      onEditSunlightPost?.(updated || { ...editingPost, ...updates })
+    } catch (e) {
+      onEditSunlightPost?.({ ...editingPost, ...updates })
+    }
+    setEditingPost(null)
+  }
 
   return (
     <div className="fade-in">
@@ -508,35 +610,24 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
 
       {/* Posts grid */}
       <div style={{ padding: '4px 12px 28px' }}>
-        {displayPosts.length === 0 && activeTab !== 'all' ? (
+        {displayPosts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
             <div style={{ fontSize: 32, marginBottom: 10 }}>📭</div>
-            <div style={{ fontSize: 14, fontWeight: 600 }}>No {activeTab} posts yet</div>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>No posts yet</div>
             <div style={{ fontSize: 13, marginTop: 4 }}>Your posts will appear here</div>
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            {displayPosts.map(post => (
-              <UserPostCard key={post.id} post={post} />
-            ))}
-            {activeTab === 'all' && (
-              <div style={{
-                background: '#fff', borderRadius: 14, boxShadow: 'var(--shadow)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                minHeight: 130, border: '2px dashed var(--border)', cursor: 'pointer',
-              }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{
-                    width: 34, height: 34, borderRadius: '50%', background: 'var(--bg)',
-                    margin: '0 auto 7px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <PlusIcon size={16} color="#AAAAAA" />
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>New Post</div>
-                </div>
-              </div>
-            )}
+            {displayPosts.map(post => {
+              const isEditableQuestion = post.type === 'question' && !post.isStatic && onEditSunlightPost
+              return (
+                <UserPostCard
+                  key={post.id}
+                  post={post}
+                  onEdit={isEditableQuestion ? () => setEditingPost(post) : undefined}
+                />
+              )
+            })}
           </div>
         )}
       </div>
@@ -547,6 +638,15 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
           user={user}
           onClose={() => setShowEdit(false)}
           onSave={handleSaveProfile}
+        />
+      )}
+
+      {/* Edit Post sheet */}
+      {editingPost && (
+        <ProfileEditSheet
+          post={editingPost}
+          onClose={() => setEditingPost(null)}
+          onSave={handleSaveEdit}
         />
       )}
     </div>
