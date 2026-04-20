@@ -187,33 +187,45 @@ export default function MapHome({ onSunlight, communityPosts = [] }) {
         ref={filterRef}
         style={{
           position: 'absolute', top: 64, left: 0, right: 0, zIndex: 1000,
-          display: 'flex', gap: 8, padding: '8px 12px',
+        }}
+      >
+        {/* Scrollable chip row */}
+        <div style={{
+          display: 'flex', gap: 7, padding: '8px 12px',
           overflowX: 'auto',
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           WebkitOverflowScrolling: 'touch',
-        }}
-      >
-        {FILTERS.map(f => {
-          const active = filter === f.id
-          return (
-            <button
-              key={f.id}
-              onClick={() => setFilter(active && f.id !== 'all' ? 'all' : f.id)}
-              style={{
-                flexShrink: 0, padding: '6px 14px', borderRadius: 20, border: 'none',
-                background: active ? (f.id === 'all' ? '#1A1A1A' : f.color) : 'rgba(255,255,255,0.93)',
-                color: active ? '#fff' : (f.id === 'all' ? '#4A4A4A' : f.color),
-                fontSize: 13, fontWeight: 600, cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
-                transition: 'all 0.15s ease',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {f.label}
-            </button>
-          )
-        })}
+        }}>
+          {FILTERS.map(f => {
+            const active = filter === f.id
+            return (
+              <button
+                key={f.id}
+                onClick={() => setFilter(active && f.id !== 'all' ? 'all' : f.id)}
+                style={{
+                  flexShrink: 0, padding: '6px 11px', borderRadius: 20, border: 'none',
+                  background: active ? (f.id === 'all' ? '#1A1A1A' : f.color) : 'rgba(255,255,255,0.93)',
+                  color: active ? '#fff' : (f.id === 'all' ? '#4A4A4A' : f.color),
+                  fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {f.label}
+              </button>
+            )
+          })}
+          {/* Right spacer so last chip isn't flush against the fade */}
+          <div style={{ minWidth: 36, flexShrink: 0 }} />
+        </div>
+        {/* Right-edge gradient fade — hints that more chips are scrollable */}
+        <div style={{
+          position: 'absolute', top: 0, right: 0, bottom: 0, width: 40,
+          background: 'linear-gradient(to right, transparent, rgba(245,245,245,0.92))',
+          pointerEvents: 'none',
+        }} />
       </div>
 
       {/* ── Right-side button stack: Sunlight (top) + List/Map (bottom) ── */}
