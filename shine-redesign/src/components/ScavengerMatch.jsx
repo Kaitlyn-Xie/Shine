@@ -85,10 +85,11 @@ function GroupDetailSheet({ group, onClose }) {
 }
 
 // ── Mission Card ───────────────────────────────────────────────────────────────
-function MissionCard({ mission, joined, onJoin, onLeave }) {
+function MissionCard({ mission, joined, optedIn, onOptIn, onJoin, onLeave }) {
   const [loading, setLoading] = useState(false)
 
   async function handleToggle() {
+    if (!optedIn) { await onOptIn(); return }
     setLoading(true)
     try {
       if (joined) await onLeave()
@@ -98,20 +99,25 @@ function MissionCard({ mission, joined, onJoin, onLeave }) {
     }
   }
 
+  const btnLabel = loading ? '…'
+    : !optedIn ? '🔎 Turn on matching to join'
+    : joined ? '✓ Joined — Leave'
+    : 'Join this Mission'
+
   return (
     <div style={{
       background: '#fff', borderRadius: 18, padding: '16px 18px', marginBottom: 12,
       boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-      border: `1.5px solid ${joined ? PRIMARY + '55' : '#F0F0F0'}`,
+      border: `1.5px solid ${joined && optedIn ? PRIMARY + '55' : '#F0F0F0'}`,
       transition: 'border-color 0.2s',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
         <div style={{
           width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-          background: joined ? LIGHT : '#F3F4F6',
+          background: joined && optedIn ? LIGHT : '#F3F4F6',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
         }}>
-          {joined ? '✅' : '🗺️'}
+          {joined && optedIn ? '✅' : '🗺️'}
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4 }}>{mission.title}</div>
@@ -127,14 +133,14 @@ function MissionCard({ mission, joined, onJoin, onLeave }) {
         disabled={loading}
         style={{
           width: '100%', marginTop: 14, padding: '11px 0', borderRadius: 12,
-          border: joined ? `1.5px solid ${PRIMARY}` : 'none',
-          background: joined ? '#fff' : GRADIENT,
-          color: joined ? PRIMARY : '#fff',
+          border: joined && optedIn ? `1.5px solid ${PRIMARY}` : 'none',
+          background: !optedIn ? '#F3F4F6' : joined ? '#fff' : GRADIENT,
+          color: !optedIn ? '#6B7280' : joined ? PRIMARY : '#fff',
           fontWeight: 800, fontSize: 14, cursor: loading ? 'default' : 'pointer',
           opacity: loading ? 0.7 : 1, transition: 'all 0.2s',
         }}
       >
-        {loading ? '...' : joined ? '✓ Joined — Leave' : 'Join this Mission'}
+        {btnLabel}
       </button>
     </div>
   )
@@ -303,69 +309,61 @@ export default function ScavengerMatch({ user }) {
         </div>
       )}
 
-      {/* Missions List */}
-      {isOptIn ? (
-        <div style={{ margin: '0 16px' }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', marginBottom: 4 }}>🗺️ Available Missions</div>
-          <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 14 }}>
-            Join missions you'd like to do with a group. You'll be matched when enough students join.
-          </div>
-          {missions.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 32, color: '#9A9A9A', fontSize: 14 }}>No missions available yet.</div>
-          )}
-          {missions.map(m => (
-            <div key={m.id}>
-              <MissionCard
-                mission={m}
-                joined={joinedIds.has(m.id)}
-                onJoin={() => handleJoin(m.id)}
-                onLeave={() => handleLeave(m.id)}
-              />
-              {/* Run Matching button — visible when this user has joined and is not yet grouped */}
-              {joinedIds.has(m.id) && !groupsByMission[m.id]?.length && (
-                <div style={{ marginBottom: 14, marginTop: -4 }}>
-                  <button
-                    onClick={() => handleRunMatch(m.id)}
-                    disabled={runningMatch === m.id}
-                    style={{
-                      width: '100%', padding: '10px 0', borderRadius: 12, border: `1.5px dashed ${PRIMARY}66`,
-                      background: '#fff', color: PRIMARY, fontWeight: 700, fontSize: 13,
-                      cursor: runningMatch === m.id ? 'default' : 'pointer',
-                      opacity: runningMatch === m.id ? 0.7 : 1,
-                    }}
-                  >
-                    {runningMatch === m.id ? '⏳ Running AI matching…' : '🤖 Try to form groups now'}
-                  </button>
-                  {matchResult?.missionId === m.id && (
-                    <div style={{
-                      marginTop: 8, padding: '10px 14px', borderRadius: 12,
-                      background: matchResult.error ? '#FEF2F2' : LIGHT,
-                      color: matchResult.error ? '#DC2626' : PRIMARY,
-                      fontSize: 13, fontWeight: 600,
-                    }}>
-                      {matchResult.error
-                        ? `Error: ${matchResult.error}`
-                        : matchResult.groupsCreated > 0
-                          ? `✅ ${matchResult.message}`
-                          : `ℹ️ ${matchResult.message}`}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+      {/* Missions List — always visible */}
+      <div style={{ margin: '0 16px' }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', marginBottom: 4 }}>🗺️ Group Missions</div>
+        <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 14 }}>
+          {isOptIn
+            ? "Join missions you'd like to do with a group. You'll be AI-matched when enough students sign up."
+            : "Turn on matching above, then join any mission below to get matched with a group."}
         </div>
-      ) : (
-        <div style={{ margin: '0 16px', textAlign: 'center', padding: '32px 20px' }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>🌟</div>
-          <div style={{ fontSize: 16, fontWeight: 800, color: '#1A1A1A', marginBottom: 8 }}>
-            Get matched with your group!
+        {missions.length === 0 && (
+          <div style={{ textAlign: 'center', padding: 32, color: '#9A9A9A', fontSize: 14 }}>No missions available yet.</div>
+        )}
+        {missions.map(m => (
+          <div key={m.id}>
+            <MissionCard
+              mission={m}
+              joined={joinedIds.has(m.id)}
+              optedIn={isOptIn}
+              onOptIn={toggleOptIn}
+              onJoin={() => handleJoin(m.id)}
+              onLeave={() => handleLeave(m.id)}
+            />
+            {/* Run Matching button — visible when joined + opted in + no group yet */}
+            {isOptIn && joinedIds.has(m.id) && !groupsByMission[m.id]?.length && (
+              <div style={{ marginBottom: 14, marginTop: -4 }}>
+                <button
+                  onClick={() => handleRunMatch(m.id)}
+                  disabled={runningMatch === m.id}
+                  style={{
+                    width: '100%', padding: '10px 0', borderRadius: 12, border: `1.5px dashed ${PRIMARY}66`,
+                    background: '#fff', color: PRIMARY, fontWeight: 700, fontSize: 13,
+                    cursor: runningMatch === m.id ? 'default' : 'pointer',
+                    opacity: runningMatch === m.id ? 0.7 : 1,
+                  }}
+                >
+                  {runningMatch === m.id ? '⏳ Running AI matching…' : '🤖 Try to form groups now'}
+                </button>
+                {matchResult?.missionId === m.id && (
+                  <div style={{
+                    marginTop: 8, padding: '10px 14px', borderRadius: 12,
+                    background: matchResult.error ? '#FEF2F2' : LIGHT,
+                    color: matchResult.error ? '#DC2626' : PRIMARY,
+                    fontSize: 13, fontWeight: 600,
+                  }}>
+                    {matchResult.error
+                      ? `Error: ${matchResult.error}`
+                      : matchResult.groupsCreated > 0
+                        ? `✅ ${matchResult.message}`
+                        : `ℹ️ ${matchResult.message}`}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-          <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.7 }}>
-            Toggle opt-in above to see available missions and get matched with other Harvard international students who share your interests and goals.
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
 
       {/* Group Detail Sheet */}
       {selectedGroup && createPortal(
