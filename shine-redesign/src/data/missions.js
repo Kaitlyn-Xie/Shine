@@ -274,22 +274,29 @@ export const BADGES = [
 ]
 
 export const MOCK_LEADERBOARD = [
-  { name: 'Priya S.',  country: '🇮🇳', house: 'Eliot',    points: 312, completed: 18 },
-  { name: 'Kenji T.',  country: '🇯🇵', house: 'Adams',    points: 287, completed: 16 },
-  { name: 'Sofia R.',  country: '🇩🇪', house: 'Dunster',  points: 254, completed: 15 },
-  { name: 'Omar K.',   country: '🇪🇬', house: 'Lowell',   points: 231, completed: 14 },
-  { name: 'Mei Lin',   country: '🇨🇳', house: 'Kirkland', points: 198, completed: 12 },
-  { name: 'Ji-ho P.',  country: '🇰🇷', house: 'Winthrop', points: 167, completed: 10 },
-  { name: 'Lucas M.',  country: '🇧🇷', house: 'Cabot',    points: 145, completed: 9  },
-  { name: 'Amara O.',  country: '🇳🇬', house: 'Mather',   points: 120, completed: 8  },
+  { name: 'Priya S.',  country: '🇮🇳', dorm: 'Matthews',    points: 312, completed: 18 },
+  { name: 'Kenji T.',  country: '🇯🇵', dorm: 'Weld',        points: 287, completed: 16 },
+  { name: 'Sofia R.',  country: '🇩🇪', dorm: 'Thayer',      points: 254, completed: 15 },
+  { name: 'Omar K.',   country: '🇪🇬', dorm: 'Grays',       points: 231, completed: 14 },
+  { name: 'Mei Lin',   country: '🇨🇳', dorm: 'Straus',      points: 198, completed: 12 },
+  { name: 'Ji-ho P.',  country: '🇰🇷', dorm: 'Wigglesworth',points: 167, completed: 10 },
+  { name: 'Lucas M.',  country: '🇧🇷', dorm: 'Canaday',     points: 145, completed: 9  },
+  { name: 'Amara O.',  country: '🇳🇬', dorm: 'Greenough',   points: 120, completed: 8  },
 ]
 
 export const MOCK_GROUP_LEADERBOARD = [
-  { name: 'Eliot House',    members: 28, points: 4320, leader: 'Priya S.' },
-  { name: 'Adams House',    members: 31, points: 3980, leader: 'Kenji T.' },
-  { name: 'Dunster House',  members: 25, points: 3750, leader: 'Sofia R.' },
-  { name: 'Lowell House',   members: 30, points: 3210, leader: 'Omar K.'  },
-  { name: 'Kirkland House', members: 22, points: 2870, leader: 'Mei Lin'  },
+  { name: 'Matthews',     members: 28, points: 4320, leader: 'Priya S.'  },
+  { name: 'Weld',         members: 31, points: 3980, leader: 'Kenji T.'  },
+  { name: 'Thayer',       members: 25, points: 3750, leader: 'Sofia R.'  },
+  { name: 'Grays',        members: 30, points: 3210, leader: 'Omar K.'   },
+  { name: 'Straus',       members: 22, points: 2870, leader: 'Mei Lin'   },
+  { name: 'Wigglesworth', members: 19, points: 2540, leader: 'Ji-ho P.'  },
+  { name: 'Canaday',      members: 24, points: 2190, leader: 'Lucas M.'  },
+  { name: 'Greenough',    members: 20, points: 1860, leader: 'Amara O.'  },
+  { name: 'Hollis',       members: 17, points: 1620, leader: 'Ana P.'    },
+  { name: 'Stoughton',    members: 18, points: 1380, leader: 'Yuki N.'   },
+  { name: 'Pennypacker',  members: 15, points: 1140, leader: 'Dev S.'    },
+  { name: 'Lionel',       members: 16, points:  980, leader: 'Zara A.'   },
 ]
 
 export function computePoints(mission, { groupSize = 1, hasDiversity = false, shareToFeed = false, isTimeLimited = false }) {

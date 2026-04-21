@@ -406,7 +406,7 @@ function LeaderboardTab({ huntData, user }) {
   const totalPts = huntData.completions.reduce((s, c) => s + (c.pts?.total ?? 0), 0)
   const badgePts = huntData.badges.reduce((s, id) => { const b = BADGES.find(b => b.id === id); return s + (b?.points ?? 0) }, 0)
   const myTotal = totalPts + badgePts
-  const myEntry = { name: user?.name || 'You', country: '🌟', house: user?.house || 'Your House', points: myTotal, completed: huntData.completions.length, isMe: true }
+  const myEntry = { name: user?.name || 'You', country: '🌟', dorm: user?.dorm || 'Your Dorm', points: myTotal, completed: huntData.completions.length, isMe: true }
   const allIndividual = [...MOCK_LEADERBOARD, myEntry].sort((a, b) => b.points - a.points)
   const myRank = allIndividual.findIndex(e => e.isMe) + 1
   return (
@@ -414,7 +414,7 @@ function LeaderboardTab({ huntData, user }) {
       <div style={{ display: 'flex', gap: 0, margin: '16px 16px 14px', background: '#F3F4F6', borderRadius: 12, padding: 4 }}>
         {['individual', 'group'].map(m => (
           <button key={m} onClick={() => setMode(m)} style={{ flex: 1, padding: '9px 0', borderRadius: 9, border: 'none', cursor: 'pointer', background: mode === m ? '#fff' : 'transparent', color: mode === m ? '#1A1A1A' : '#6B7280', fontWeight: mode === m ? 700 : 500, fontSize: 13, boxShadow: mode === m ? '0 1px 4px rgba(0,0,0,0.1)' : 'none', transition: 'all 0.15s' }}>
-            {m === 'individual' ? '👤 Individual' : '🏠 By House'}
+            {m === 'individual' ? '👤 Individual' : '🏠 By Dorm'}
           </button>
         ))}
       </div>
