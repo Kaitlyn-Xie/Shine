@@ -6,7 +6,7 @@ import {
 } from './Icons'
 import {
   MISSIONS, BADGES, MOCK_LEADERBOARD, MOCK_GROUP_LEADERBOARD,
-  HUNT_TYPE_CONFIG, DIFFICULTY_POINTS, computePoints, getDistance,
+  HUNT_TYPE_CONFIG, DIFFICULTY_POINTS, computePoints, getDistance, MATCH_GROUP_BONUS,
 } from '../data/missions'
 import { api } from '../lib/api'
 import ScavengerMatch from './ScavengerMatch'
@@ -83,6 +83,7 @@ function CompletionSheet({ mission, onClose, onComplete }) {
   const [textAnswer, setTextAnswer] = useState('')
   const [groupSize, setGroupSize] = useState(1)
   const [hasDiversity, setHasDiversity] = useState(false)
+  const [isMatchGroup, setIsMatchGroup] = useState(false)
   const [result, setResult] = useState(null)
   const fileRef = useRef(null)
 
@@ -120,9 +121,9 @@ function CompletionSheet({ mission, onClose, onComplete }) {
   }
 
   const handleSubmit = () => {
-    const pts = computePoints(mission, { groupSize, hasDiversity, shareToFeed, isTimeLimited: mission.timing !== 'evergreen' })
-    setResult({ pts, shareToFeed })
-    onComplete({ mission, pts, photoUrl, shareToFeed })
+    const pts = computePoints(mission, { groupSize, hasDiversity, shareToFeed, isTimeLimited: mission.timing !== 'evergreen', isMatchGroup })
+    setResult({ pts, shareToFeed, isMatchGroup })
+    onComplete({ mission, pts, photoUrl, shareToFeed, isMatchGroup })
   }
 
   if (result) {
@@ -138,6 +139,7 @@ function CompletionSheet({ mission, onClose, onComplete }) {
             <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 10, background: '#F0F0F0', color: '#1A1A1A' }}>Base: +{result.pts.base}</span>
               {result.pts.bonus > 0 && <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 10, background: HUNT_LIGHT, color: HUNT_PRIMARY }}>Bonuses: +{result.pts.bonus}</span>}
+              {result.isMatchGroup && <span style={{ fontSize: 12, fontWeight: 700, padding: '4px 10px', borderRadius: 10, background: '#EDE9FE', color: '#7C3AED' }}>🤝 Match Bonus: +{MATCH_GROUP_BONUS}</span>}
             </div>
           </div>
           <button onClick={onClose} style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', background: HUNT_GRADIENT, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(27,135,87,0.35)' }}>
@@ -252,11 +254,26 @@ function CompletionSheet({ mission, onClose, onComplete }) {
           {/* Bonus Options */}
           <div style={{ background: '#FFFBEB', borderRadius: 14, padding: '14px 16px', marginTop: 4 }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: '#92400E', marginBottom: 12, letterSpacing: '0.3px' }}>⭐ BONUS POINTS</div>
+
+            {/* Match Group Bonus */}
+            <div
+              onClick={() => setIsMatchGroup(v => !v)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 14, padding: '10px 12px', borderRadius: 12, background: isMatchGroup ? '#EDE9FE' : '#F5F3FF', border: `1.5px solid ${isMatchGroup ? '#7C3AED44' : '#DDD6FE'}`, transition: 'all 0.15s' }}
+            >
+              <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: isMatchGroup ? '#7C3AED' : '#DDD6FE', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}>
+                {isMatchGroup && <CheckIcon size={13} color="#fff" />}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#5B21B6' }}>🤝 Completed with matched group <span style={{ fontWeight: 900 }}>(+{MATCH_GROUP_BONUS} pts)</span></div>
+                <div style={{ fontSize: 11, color: '#7C3AED', marginTop: 1 }}>Used a group from the Match tab · also unlocks 4-person group tier</div>
+              </div>
+            </div>
+
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>👥 Group size</div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>👥 Group size {isMatchGroup && <span style={{ fontSize: 11, fontWeight: 600, color: '#7C3AED' }}>(auto-set to 4+ via match)</span>}</div>
+              <div style={{ display: 'flex', gap: 8, opacity: isMatchGroup ? 0.45 : 1, pointerEvents: isMatchGroup ? 'none' : 'auto' }}>
                 {[{ val: 1, label: 'Just me', bonus: '+0' }, { val: 2, label: '2–3 people', bonus: '+3' }, { val: 4, label: '4–6 people', bonus: '+5' }].map(o => (
-                  <button key={o.val} onClick={() => setGroupSize(o.val)} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: 'none', cursor: 'pointer', background: groupSize === o.val ? '#F59E0B' : '#FEF3C7', color: groupSize === o.val ? '#fff' : '#92400E', fontSize: 11, fontWeight: 700, lineHeight: 1.4 }}>
+                  <button key={o.val} onClick={() => setGroupSize(o.val)} style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: 'none', cursor: 'pointer', background: (!isMatchGroup && groupSize === o.val) || (isMatchGroup && o.val === 4) ? '#F59E0B' : '#FEF3C7', color: (!isMatchGroup && groupSize === o.val) || (isMatchGroup && o.val === 4) ? '#fff' : '#92400E', fontSize: 11, fontWeight: 700, lineHeight: 1.4 }}>
                     {o.label}<br /><span style={{ opacity: 0.8 }}>{o.bonus}</span>
                   </button>
                 ))}
@@ -325,9 +342,13 @@ function MissionDetailSheet({ mission, isCompleted, onClose, onStart }) {
 
           <div style={{ background: '#FFFBEB', borderRadius: 14, padding: '12px 16px', marginBottom: 22 }}>
             <div style={{ fontSize: 12, fontWeight: 800, color: '#92400E', marginBottom: 6, letterSpacing: '0.3px' }}>EARN BONUS POINTS</div>
-            <div style={{ fontSize: 13, color: '#78350F', lineHeight: 1.6 }}>
+            <div style={{ fontSize: 13, color: '#78350F', lineHeight: 1.7 }}>
               +3 with 2–3 friends · +5 with 4–6 friends · +3 for 3+ countries · +2 for sharing to feed
               {mission.timing !== 'evergreen' && ' · +5 time-limited bonus'}
+            </div>
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 7, padding: '6px 10px', background: '#EDE9FE', borderRadius: 10 }}>
+              <span style={{ fontSize: 14 }}>🤝</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#5B21B6' }}>+{MATCH_GROUP_BONUS} pts for completing with a matched group</span>
             </div>
           </div>
 

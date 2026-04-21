@@ -299,14 +299,20 @@ export const MOCK_GROUP_LEADERBOARD = [
   { name: 'Lionel',       members: 16, points:  980, leader: 'Zara A.'   },
 ]
 
-export function computePoints(mission, { groupSize = 1, hasDiversity = false, shareToFeed = false, isTimeLimited = false }) {
+// Match-group bonus: completing a mission with an AI-matched group earns extra points
+export const MATCH_GROUP_BONUS = 15
+
+export function computePoints(mission, { groupSize = 1, hasDiversity = false, shareToFeed = false, isTimeLimited = false, isMatchGroup = false }) {
   const base = DIFFICULTY_POINTS[mission.difficulty] ?? 10
   let bonus = 0
-  if (groupSize >= 4) bonus += 5
-  else if (groupSize >= 2) bonus += 3
+  // If via matched group, auto-qualify for the 4-person group tier
+  const effectiveGroupSize = isMatchGroup ? Math.max(groupSize, 4) : groupSize
+  if (effectiveGroupSize >= 4) bonus += 5
+  else if (effectiveGroupSize >= 2) bonus += 3
   if (hasDiversity) bonus += 3
   if (shareToFeed) bonus += 2
   if (isTimeLimited && mission.timing !== 'evergreen') bonus += 5
+  if (isMatchGroup) bonus += MATCH_GROUP_BONUS
   return { base, bonus, total: base + bonus }
 }
 
