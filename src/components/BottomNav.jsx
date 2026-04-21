@@ -1,10 +1,11 @@
-import { GridIcon, ChatIcon, UserIcon, SunIcon } from './Icons'
+import { GridIcon, ChatIcon, UserIcon, SunIcon, ActivityIcon } from './Icons'
 
 const TABS = [
-  { id: 'post',    Icon: GridIcon,  label: 'Post'    },
-  { id: 'chat',    Icon: ChatIcon,  label: 'Chat'    },
-  { id: 'map',     isShine: true                     },
-  { id: 'profile', Icon: UserIcon,  label: 'Profile' },
+  { id: 'post',     Icon: GridIcon,     label: 'Post'     },
+  { id: 'chat',     Icon: ChatIcon,     label: 'Chat'     },
+  { id: 'map',      isShine: true                         },
+  { id: 'activity', Icon: ActivityIcon, label: 'Activity' },
+  { id: 'profile',  Icon: UserIcon,     label: 'Profile'  },
 ]
 
 export default function BottomNav({ active, onChange }) {
