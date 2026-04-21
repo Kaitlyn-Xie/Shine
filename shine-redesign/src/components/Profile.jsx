@@ -343,6 +343,12 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
   const [editingPost, setEditingPost] = useState(null)
   const [huntData, setHuntData] = useState(readHuntData)
 
+  // Hidden journal state — private to this user
+  const [journal, setJournal] = useState('')
+  const [journalDraft, setJournalDraft] = useState('')
+  const [journalSaving, setJournalSaving] = useState(false)
+  const [journalSaved, setJournalSaved] = useState(false)
+
   useEffect(() => {
     api.getHuntStats()
       .then(stats => {
@@ -354,6 +360,14 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
         }))
         const earnedBadgeIds = BADGES.filter(b => b.check(completions)).map(b => b.id)
         setHuntData({ completions, badges: earnedBadgeIds, feedItems: [] })
+      })
+      .catch(() => {})
+
+    // Load hidden journal
+    api.getHiddenJournal()
+      .then(data => {
+        setJournal(data.hiddenJournal ?? '')
+        setJournalDraft(data.hiddenJournal ?? '')
       })
       .catch(() => {})
   }, [])
@@ -379,6 +393,21 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
     : allPosts
 
   const handleSaveProfile = (updates) => onUpdate?.(updates)
+
+  const handleSaveJournal = async () => {
+    if (journalDraft === journal) return
+    setJournalSaving(true)
+    try {
+      await api.saveHiddenJournal(journalDraft)
+      setJournal(journalDraft)
+      setJournalSaved(true)
+      setTimeout(() => setJournalSaved(false), 2500)
+    } catch (e) {
+      console.error('Failed to save journal', e)
+    } finally {
+      setJournalSaving(false)
+    }
+  }
 
   const handleSaveEdit = async (updates) => {
     if (!editingPost) return
@@ -579,6 +608,50 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
             Complete missions to earn badges 🎖️
           </div>
         )}
+      </div>
+
+      {/* ── Hidden Journal — only visible to the logged-in user ── */}
+      <div style={{ margin: '0 0 10px', background: '#fff', padding: '16px 20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+          <span style={{ fontSize: 16 }}>📓</span>
+          <span style={{ fontWeight: 800, fontSize: 15, color: '#1A1A1A' }}>My Hidden Journal</span>
+          <span style={{
+            marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#fff',
+            background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
+            padding: '2px 8px', borderRadius: 8,
+          }}>🔒 Private</span>
+        </div>
+        <p style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.6, margin: '0 0 12px' }}>
+          This section is private to you and used by the scavenger-hunt matcher to better understand your needs, what you're looking to do with friends, how you're feeling, etc.
+        </p>
+        <textarea
+          value={journalDraft}
+          onChange={e => setJournalDraft(e.target.value)}
+          placeholder="How are you feeling about your Harvard journey? What are you hoping to experience with new friends? What kinds of activities excite you?..."
+          rows={5}
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            padding: '12px 14px', borderRadius: 14, border: '1.5px solid #E5E7EB',
+            fontSize: 14, lineHeight: 1.7, resize: 'vertical', fontFamily: 'inherit',
+            color: '#1A1A1A', background: '#FAFAFA', outline: 'none',
+            transition: 'border-color 0.2s',
+          }}
+          onFocus={e => { e.target.style.borderColor = '#7C3AED' }}
+          onBlur={e => { e.target.style.borderColor = '#E5E7EB' }}
+        />
+        <button
+          onClick={handleSaveJournal}
+          disabled={journalSaving || journalDraft === journal}
+          style={{
+            marginTop: 10, padding: '10px 20px', borderRadius: 12, border: 'none',
+            background: journalSaved ? '#10B981' : journalDraft !== journal ? 'linear-gradient(135deg, #7C3AED, #6D28D9)' : '#E5E7EB',
+            color: journalDraft !== journal || journalSaved ? '#fff' : '#9A9A9A',
+            fontWeight: 700, fontSize: 14, cursor: journalDraft !== journal && !journalSaving ? 'pointer' : 'default',
+            transition: 'all 0.2s',
+          }}
+        >
+          {journalSaving ? '⏳ Saving…' : journalSaved ? '✓ Saved!' : 'Save Journal'}
+        </button>
       </div>
 
       {/* Filter tabs */}

@@ -52,4 +52,17 @@ export const api = {
 
   getHuntStats: () => request("GET", "/hunt/stats"),
   completeHuntMission: (data) => request("POST", "/hunt/complete", data),
+
+  // ── Hidden Journal ────────────────────────────────────────────────────────
+  getHiddenJournal: () => request("GET", "/profile/hidden-journal"),
+  saveHiddenJournal: (hiddenJournal) => request("PUT", "/profile/hidden-journal", { hiddenJournal }),
+
+  // ── Scavenger Matching ────────────────────────────────────────────────────
+  setScavengerOptIn: (optIn) => request("POST", "/scavenger/opt-in", { optIn }),
+  getScavengerMissions: () => request("GET", "/scavenger/missions"),
+  joinScavengerMission: (id) => request("POST", `/scavenger/missions/${id}/join`),
+  leaveScavengerMission: (id) => request("DELETE", `/scavenger/missions/${id}/join`),
+  getMyGroups: () => request("GET", "/scavenger/my-groups"),
+  getMyParticipation: () => request("GET", "/scavenger/my-participation"),
+  runMatching: (missionId) => request("POST", `/scavenger/missions/${missionId}/run-matching`),
 };

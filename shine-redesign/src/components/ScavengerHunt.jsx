@@ -9,6 +9,7 @@ import {
   HUNT_TYPE_CONFIG, DIFFICULTY_POINTS, computePoints, getDistance,
 } from '../data/missions'
 import { api } from '../lib/api'
+import ScavengerMatch from './ScavengerMatch'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const HUNT_PRIMARY = '#1B8757'
@@ -565,7 +566,7 @@ export default function ScavengerHunt({ user }) {
 
       {/* ── Inner Tabs ── */}
       <div style={{ background: '#fff', borderBottom: '1px solid var(--border)', display: 'flex', flexShrink: 0 }}>
-        {[{ id: 'missions', label: '🗺️ Missions' }, { id: 'leaderboard', label: '🏆 Board' }].map(t => (
+        {[{ id: 'missions', label: '🗺️ Missions' }, { id: 'match', label: '🤝 Match' }, { id: 'leaderboard', label: '🏆 Board' }].map(t => (
           <button key={t.id} onClick={() => setActiveTab(t.id)} style={{ flex: 1, padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: activeTab === t.id ? 700 : 500, color: activeTab === t.id ? HUNT_PRIMARY : '#6B7280', borderBottom: activeTab === t.id ? `2.5px solid ${HUNT_PRIMARY}` : '2.5px solid transparent', transition: 'all 0.15s' }}>
             {t.label}
           </button>
@@ -603,6 +604,8 @@ export default function ScavengerHunt({ user }) {
           </div>
         </div>
       )}
+
+      {activeTab === 'match' && <ScavengerMatch user={user} />}
 
       {activeTab === 'leaderboard' && <LeaderboardTab huntData={huntData} user={user} />}
 

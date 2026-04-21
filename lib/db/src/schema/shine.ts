@@ -13,6 +13,10 @@ export const shineUsersTable = pgTable("shine_users", {
   interests: text("interests").array().notNull().default([]),
   isOnCampus: boolean("is_on_campus").notNull().default(false),
   onboarded: boolean("onboarded").notNull().default(false),
+  // Hidden journal — private to the user, used for scavenger-hunt matching
+  hiddenJournal: text("hidden_journal"),
+  // Scavenger-hunt matching opt-in
+  isScavengerOptIn: boolean("is_scavenger_opt_in").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -67,5 +71,37 @@ export const shineQuestionAnswersTable = pgTable("shine_question_answers", {
   body: text("body").notNull(),
   isAnonymous: boolean("is_anonymous").notNull().default(false),
   likes: integer("likes").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ── Scavenger Hunt Matching ───────────────────────────────────────────────────
+// These "match missions" are separate from the gamification missions above.
+// They represent real-world group activities that students opt into for matching.
+
+export const shineMatchMissionsTable = pgTable("shine_match_missions", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  minGroupSize: integer("min_group_size").notNull().default(4),
+  maxGroupSize: integer("max_group_size"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Tracks which users have joined which match missions (waiting for grouping)
+export const shineMissionParticipantsTable = pgTable("shine_mission_participants", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  missionId: integer("mission_id").notNull(),
+  joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Stores the matched groups per mission
+export const shineMatchGroupsTable = pgTable("shine_match_groups", {
+  id: serial("id").primaryKey(),
+  missionId: integer("mission_id").notNull(),
+  // Stored as comma-separated user IDs for simplicity with Drizzle/pg
+  memberIds: text("member_ids").notNull(),
+  matchingSummary: text("matching_summary"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
