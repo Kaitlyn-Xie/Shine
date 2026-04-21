@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import {
   TrophyIcon, CloseIcon, CheckIcon, CameraIcon,
   ArrowRightIcon,
@@ -605,26 +606,31 @@ export default function ScavengerHunt({ user }) {
 
       {activeTab === 'leaderboard' && <LeaderboardTab huntData={huntData} user={user} />}
 
-      {/* ── Mission Detail ── */}
-      {selectedMission && !completing && (
+      {/* ── Mission Detail — portal to escape scroll container ── */}
+      {selectedMission && !completing && createPortal(
         <MissionDetailSheet
           mission={selectedMission}
           isCompleted={completedIds.has(selectedMission.id)}
           onClose={() => setSelectedMission(null)}
           onStart={() => setCompleting(selectedMission)}
-        />
+        />,
+        document.body
       )}
 
-      {/* ── Completion Flow ── */}
-      {completing && (
+      {/* ── Completion Flow — portal to escape scroll container ── */}
+      {completing && createPortal(
         <CompletionSheet
           mission={completing}
           onClose={() => { setCompleting(null); setSelectedMission(null) }}
           onComplete={handleComplete}
-        />
+        />,
+        document.body
       )}
 
-      {newBadge && <BadgeToast badge={newBadge} onDone={() => setNewBadge(null)} />}
+      {newBadge && createPortal(
+        <BadgeToast badge={newBadge} onDone={() => setNewBadge(null)} />,
+        document.body
+      )}
     </div>
   )
 }

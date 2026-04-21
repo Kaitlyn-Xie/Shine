@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { api } from '../lib/api'
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
@@ -595,8 +596,8 @@ function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, onEditSu
         ))}
       </div>
 
-      {showAsk && <AskQuestionSheet onClose={() => setShowAsk(false)} onSubmit={handleAsk} />}
-      {editingQ && <EditQuestionSheet q={editingQ} onClose={() => setEditingQ(null)} onSave={handleEditSave} />}
+      {showAsk && createPortal(<AskQuestionSheet onClose={() => setShowAsk(false)} onSubmit={handleAsk} />, document.body)}
+      {editingQ && createPortal(<EditQuestionSheet q={editingQ} onClose={() => setEditingQ(null)} onSave={handleEditSave} />, document.body)}
     </>
   )
 }

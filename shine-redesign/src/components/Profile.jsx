@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { CloseIcon, PlusIcon, GlobeIcon, CheckIcon } from './Icons'
 import { TYPE_CONFIG } from '../data'
 import { BADGES } from '../data/missions'
@@ -632,22 +633,24 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
         )}
       </div>
 
-      {/* Edit Profile sheet */}
-      {showEdit && (
+      {/* Edit Profile sheet — portal to escape scroll container */}
+      {showEdit && createPortal(
         <EditProfileSheet
           user={user}
           onClose={() => setShowEdit(false)}
           onSave={handleSaveProfile}
-        />
+        />,
+        document.body
       )}
 
-      {/* Edit Post sheet */}
-      {editingPost && (
+      {/* Edit Post sheet — portal to escape scroll container */}
+      {editingPost && createPortal(
         <ProfileEditSheet
           post={editingPost}
           onClose={() => setEditingPost(null)}
           onSave={handleSaveEdit}
-        />
+        />,
+        document.body
       )}
     </div>
   )
