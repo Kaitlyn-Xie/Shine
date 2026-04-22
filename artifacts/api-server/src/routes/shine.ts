@@ -998,7 +998,7 @@ router.post("/shine/scavenger/run-matching", async (req, res): Promise<void> => 
 
   const eligibleIds = queue.map(q => q.userId).filter(id => !alreadyGrouped.has(id));
 
-  const MIN_GROUP = 4;
+  const MIN_GROUP = 3;
   const MAX_GROUP = 8;
 
   if (eligibleIds.length < MIN_GROUP) {
