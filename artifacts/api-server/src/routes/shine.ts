@@ -944,7 +944,7 @@ router.post("/shine/scavenger/groups/:id/complete-mission", async (req, res): Pr
   const groupId = parseInt(req.params.id, 10);
   if (isNaN(groupId)) { res.status(400).json({ error: "Invalid group id" }); return; }
 
-  const { photoUrl, caption, shareToFeed, ptsTotal } = req.body ?? {};
+  const { photoUrl, caption, shareToFeed, ptsTotal, locationLat, locationLng, locationName } = req.body ?? {};
   if (!photoUrl) { res.status(400).json({ error: "photoUrl is required" }); return; }
 
   // Verify membership + mission chosen
@@ -992,6 +992,9 @@ router.post("/shine/scavenger/groups/:id/complete-mission", async (req, res): Pr
       img: photoUrl,
       mediaType: "photo",
       isHunt: true,
+      locationLat: locationLat ?? null,
+      locationLng: locationLng ?? null,
+      locationName: locationName ?? null,
     });
   }
 

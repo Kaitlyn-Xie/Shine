@@ -69,6 +69,19 @@ function MapClickHandler({ onMapClick }) {
   return null
 }
 
+function createHuntPinIcon(selected = false) {
+  const s = selected ? 46 : 38
+  return L.divIcon({
+    html: `<div style="display:flex;flex-direction:column;align-items:center;">
+      <div style="width:${s}px;height:${s}px;border-radius:12px;background:linear-gradient(135deg,#2ECC87,#1B8757);border:3px solid #fff;box-shadow:0 3px 14px rgba(27,135,87,${selected ? '0.7' : '0.4'});display:flex;align-items:center;justify-content:center;font-size:${selected ? 22 : 18}px;transform:${selected ? 'scale(1.1)' : 'scale(1)'};transition:all 0.2s;">🗺️</div>
+      <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #1B8757;margin-top:-1px;"></div>
+    </div>`,
+    className: '',
+    iconSize: [s, s + 9],
+    iconAnchor: [s / 2, s + 9],
+  })
+}
+
 // Prevents Leaflet from intercepting touch/wheel events on overlay elements
 function useBlockMapEvents(ref) {
   useEffect(() => {
@@ -95,11 +108,13 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
   const [filter, setFilter] = useState('all')
   const [selected, setSelected] = useState(null)
   const [selectedStory, setSelectedStory] = useState(null)
+  const [selectedHuntPost, setSelectedHuntPost] = useState(null)
   const [listView, setListView] = useState(false)
   const [search, setSearch] = useState('')
   const [editingPost, setEditingPost] = useState(null)
 
-  const storyPosts = communityPosts.filter(p => p.location).filter(p => {
+  const allLocatedPosts = communityPosts.filter(p => p.location)
+  const storyPosts = allLocatedPosts.filter(p => !p.isHunt).filter(p => {
     if (filter !== 'all' && filter !== 'photo') return false
     if (search) {
       const q = search.toLowerCase()
@@ -110,6 +125,7 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
     }
     return true
   })
+  const huntPosts = allLocatedPosts.filter(p => p.isHunt)
   const sunlightPostIds = new Set(sunlightPosts.map(p => p.id))
 
   const searchRef = useRef(null)
@@ -154,7 +170,7 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
           attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <MapClickHandler onMapClick={() => { setSelected(null); setSelectedStory(null) }} />
+        <MapClickHandler onMapClick={() => { setSelected(null); setSelectedStory(null); setSelectedHuntPost(null) }} />
         {filtered.map(item => (
           <Marker
             key={item.id}
@@ -173,6 +189,23 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
                 e.originalEvent.stopPropagation()
                 setSelectedStory(post)
                 setSelected(null)
+                setSelectedHuntPost(null)
+                setListView(false)
+              }
+            }}
+          />
+        ))}
+        {huntPosts.map(post => (
+          <Marker
+            key={`hunt-${post.id}`}
+            position={[post.location.lat, post.location.lng]}
+            icon={createHuntPinIcon(selectedHuntPost?.id === post.id)}
+            eventHandlers={{
+              click: (e) => {
+                e.originalEvent.stopPropagation()
+                setSelectedHuntPost(post)
+                setSelected(null)
+                setSelectedStory(null)
                 setListView(false)
               }
             }}
@@ -318,6 +351,11 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
       {/* ── Story (community post) bottom sheet ── */}
       {selectedStory && !listView && (
         <StoryBottomSheet post={selectedStory} onClose={() => setSelectedStory(null)} />
+      )}
+
+      {/* ── Hunt post bottom sheet ── */}
+      {selectedHuntPost && !listView && (
+        <HuntPostBottomSheet post={selectedHuntPost} onClose={() => setSelectedHuntPost(null)} />
       )}
 
       {/* ── List view panel ── */}
@@ -568,6 +606,62 @@ function StoryBottomSheet({ post, onClose }) {
               width: 32, height: 32, borderRadius: '50%', background: post.avatarBg ?? '#FFC94A',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800,
             }}>
+              {(post.username ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700 }}>{post.username}</div>
+              <div style={{ fontSize: 11, color: '#9A9A9A' }}>{post.time ?? 'just now'}</div>
+            </div>
+          </div>
+          <button onClick={toggleLike} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+            <HeartIcon size={18} color={liked ? '#E8415A' : '#BBBBBB'} filled={liked} />
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#7A7A7A' }}>{(post.likes ?? 0) + localLikes}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function HuntPostBottomSheet({ post, onClose }) {
+  const [liked, setLiked] = useState(false)
+  const [localLikes, setLocalLikes] = useState(0)
+  const toggleLike = () => { setLiked(v => !v); setLocalLikes(n => n + (liked ? -1 : 1)) }
+
+  return (
+    <div className="slide-up" style={{
+      position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 1000,
+      background: '#fff', borderRadius: '20px 20px 0 0',
+      boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+      maxHeight: '72vh', overflowY: 'auto',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px' }}>
+        <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
+      </div>
+
+      {/* Header badges */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', padding: '4px 10px', borderRadius: 20, background: '#E8F8F0', color: '#1B8757' }}>🗺️ HUNT</span>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', padding: '4px 10px', borderRadius: 20, background: '#EDE9FE', color: '#7C3AED' }}>🤖 AI Match</span>
+          {post.location?.name && <span style={{ fontSize: 11, color: '#9A9A9A', fontWeight: 500 }}>📍 {post.location.name}</span>}
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+          <CloseIcon size={18} color="#9A9A9A" />
+        </button>
+      </div>
+
+      {/* Selfie */}
+      {post.img && (
+        <img src={post.img} alt="Hunt completion selfie" style={{ width: '100%', maxHeight: 260, objectFit: 'cover', display: 'block' }} />
+      )}
+
+      {/* Caption + footer */}
+      <div style={{ padding: '14px 16px 28px' }}>
+        {post.text && <p style={{ fontSize: 14, color: '#2A2A2A', lineHeight: 1.65, marginBottom: 14 }}>{post.text}</p>}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F0F0F0', paddingTop: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2ECC87,#1B8757)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff' }}>
               {(post.username ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
             </div>
             <div>

@@ -846,13 +846,6 @@ function WeeklyPromptBanner({ user, onRespond }) {
 const HUNT_GREEN = '#1B8757'
 const HUNT_LIGHT = '#E8F8F0'
 
-function readHuntFeedItems() {
-  try {
-    const raw = localStorage.getItem('shine_hunt_v1')
-    return JSON.parse(raw || 'null')?.feedItems ?? []
-  } catch { return [] }
-}
-
 function HuntPostCard({ item, index }) {
   return (
     <div
@@ -867,18 +860,18 @@ function HuntPostCard({ item, index }) {
         position: 'relative',
       }}
     >
-      {/* Green "Hunt" badge */}
-      <div style={{
-        position: 'absolute', top: 8, left: 8, zIndex: 2,
-        background: HUNT_GREEN, color: '#fff',
-        fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 8,
-        letterSpacing: '0.3px',
-      }}>
-        🗺️ HUNT
+      {/* Badges row */}
+      <div style={{ position: 'absolute', top: 8, left: 8, right: 8, zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pointerEvents: 'none' }}>
+        <div style={{ background: HUNT_GREEN, color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 8, letterSpacing: '0.3px' }}>
+          🗺️ HUNT
+        </div>
+        <div style={{ background: 'rgba(124,58,237,0.85)', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 8 }}>
+          🤖 AI Match
+        </div>
       </div>
 
-      {item.photoUrl ? (
-        <img src={item.photoUrl} alt="" style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block', background: HUNT_LIGHT }} />
+      {item.img || item.photoUrl ? (
+        <img src={item.img || item.photoUrl} alt="" style={{ width: '100%', height: 150, objectFit: 'cover', display: 'block', background: HUNT_LIGHT }} />
       ) : (
         <div style={{ width: '100%', height: 100, background: HUNT_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
           🗺️
@@ -886,10 +879,25 @@ function HuntPostCard({ item, index }) {
       )}
 
       <div style={{ padding: '9px 10px 10px' }}>
-        <p style={{ fontSize: 12, lineHeight: 1.5, color: '#1A1A1A', fontWeight: 600, marginBottom: 4 }}>
-          {item.missionTitle}
-        </p>
-        <span style={{ fontSize: 10, color: HUNT_GREEN, fontWeight: 700 }}>{item.time}</span>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#4A4A4A', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg,#2ECC87,#1B8757)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 9, fontWeight: 900, flexShrink: 0 }}>
+            {(item.username || 'U')[0].toUpperCase()}
+          </span>
+          {item.username}
+        </div>
+        {item.text && (
+          <p style={{ fontSize: 11, lineHeight: 1.5, color: '#1A1A1A', fontWeight: 500, marginBottom: 5 }}>
+            {item.text.length > 70 ? item.text.slice(0, 70) + '…' : item.text}
+          </p>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 10, color: HUNT_GREEN, fontWeight: 700 }}>{item.time}</span>
+          {item.location?.name && (
+            <span style={{ fontSize: 9, color: '#9CA3AF', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 2 }}>
+              📍 {item.location.name}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -925,8 +933,8 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
   const left  = filtered.filter((_, i) => i % 2 === 0)
   const right = filtered.filter((_, i) => i % 2 === 1)
 
-  // Hunt feed items (read fresh each render from localStorage)
-  const huntItems = readHuntFeedItems()
+  // Hunt feed items — all API posts flagged as scavenger hunt completions
+  const huntItems = userPosts.filter(p => p.isHunt)
   const huntLeft  = huntItems.filter((_, i) => i % 2 === 0)
   const huntRight = huntItems.filter((_, i) => i % 2 === 1)
 

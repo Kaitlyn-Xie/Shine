@@ -1,8 +1,36 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import { api } from '../lib/api'
 import { CloseIcon, CheckIcon } from './Icons'
 import { MISSIONS, computePoints, MATCH_GROUP_BONUS } from '../data/missions'
+
+// Fix leaflet default icons
+delete L.Icon.Default.prototype._getIconUrl
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+})
+
+function HuntPinIcon() {
+  return L.divIcon({
+    html: `<div style="display:flex;flex-direction:column;align-items:center;">
+      <div style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#2ECC87,#1B8757);border:3px solid #fff;box-shadow:0 3px 14px rgba(27,135,87,0.5);display:flex;align-items:center;justify-content:center;font-size:18px;">🗺️</div>
+      <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #1B8757;margin-top:-1px;"></div>
+    </div>`,
+    className: '',
+    iconSize: [38, 47],
+    iconAnchor: [19, 47],
+  })
+}
+
+function MapTapHandler({ onTap }) {
+  useMapEvents({ click: e => onTap(e.latlng) })
+  return null
+}
 
 const PRIMARY = '#1B8757'
 const GRADIENT = 'linear-gradient(135deg, #2ECC87, #1B8757)'
@@ -111,6 +139,76 @@ function MissionChooserSheet({ groupId, onChosen, onClose }) {
   )
 }
 
+// ── Location Picker Sheet ─────────────────────────────────────────────────────
+function LocationPickerSheet({ initial, onConfirm, onClose }) {
+  const HARVARD = [42.3755, -71.1175]
+  const [pin, setPin] = useState(initial ? [initial.lat, initial.lng] : null)
+
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 2400, background: 'rgba(0,0,0,0.75)', display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ background: '#fff', padding: '14px 16px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div>
+          <div style={{ fontSize: 15, fontWeight: 900 }}>Tag your location</div>
+          <div style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>Tap the map to drop a pin where you completed the mission</div>
+        </div>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+          <CloseIcon size={20} color="#9A9A9A" />
+        </button>
+      </div>
+
+      {/* Map */}
+      <div style={{ flex: 1, position: 'relative' }}>
+        <MapContainer
+          center={pin ?? HARVARD}
+          zoom={15}
+          style={{ width: '100%', height: '100%' }}
+          zoomControl={false}
+        >
+          <TileLayer
+            attribution='© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          <MapTapHandler onTap={latlng => setPin([latlng.lat, latlng.lng])} />
+          {pin && <Marker position={pin} icon={HuntPinIcon()} />}
+        </MapContainer>
+        {!pin && (
+          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.55)', color: '#fff', padding: '10px 18px', borderRadius: 20, fontSize: 13, fontWeight: 700, pointerEvents: 'none', zIndex: 1000 }}>
+            Tap anywhere to drop a pin
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{ background: '#fff', padding: '12px 16px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))', display: 'flex', gap: 10, flexShrink: 0 }}>
+        <button
+          onClick={onClose}
+          style={{ flex: 1, padding: 13, borderRadius: 14, border: '1.5px solid #E5E7EB', background: '#fff', color: '#4A4A4A', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}
+        >
+          {pin ? 'Remove tag' : 'Skip'}
+        </button>
+        <button
+          onClick={() => {
+            if (!pin) { onConfirm(null); return }
+            // Reverse-geocode label via nominatim
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pin[0]}&lon=${pin[1]}`)
+              .then(r => r.json())
+              .then(d => {
+                const name = d.address?.building || d.address?.amenity || d.address?.road || d.address?.neighbourhood || d.address?.suburb || 'Harvard Campus'
+                onConfirm({ lat: pin[0], lng: pin[1], name })
+              })
+              .catch(() => onConfirm({ lat: pin[0], lng: pin[1], name: 'Harvard Campus' }))
+          }}
+          style={{ flex: 2, padding: 13, borderRadius: 14, border: 'none', background: pin ? GRADIENT : '#E5E7EB', color: pin ? '#fff' : '#AAAAAA', fontWeight: 800, fontSize: 14, cursor: 'pointer' }}
+        >
+          {pin ? '📍 Confirm location' : 'Skip'}
+        </button>
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 // ── Group Mission Completion Sheet ────────────────────────────────────────────
 function GroupMissionCompletionSheet({ group, onClose, onComplete }) {
   const mission = MISSIONS.find(m => String(m.id) === String(group.chosenMissionId))
@@ -120,6 +218,8 @@ function GroupMissionCompletionSheet({ group, onClose, onComplete }) {
   const [shareToFeed, setShareToFeed] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [result, setResult] = useState(null)
+  const [pickedLocation, setPickedLocation] = useState(null)
+  const [showLocationPicker, setShowLocationPicker] = useState(false)
   const fileRef = useRef(null)
 
   const pts = computePoints(
@@ -138,7 +238,15 @@ function GroupMissionCompletionSheet({ group, onClose, onComplete }) {
     if (!photoUrl || submitting) return
     setSubmitting(true)
     try {
-      await api.completeGroupMission(group.id, { photoUrl, caption, shareToFeed, ptsTotal: pts.total })
+      await api.completeGroupMission(group.id, {
+        photoUrl,
+        caption,
+        shareToFeed,
+        ptsTotal: pts.total,
+        locationLat: pickedLocation?.lat ?? null,
+        locationLng: pickedLocation?.lng ?? null,
+        locationName: pickedLocation?.name ?? null,
+      })
       setResult({ pts, shared: shareToFeed })
     } catch (e) {
       console.error(e)
@@ -147,7 +255,15 @@ function GroupMissionCompletionSheet({ group, onClose, onComplete }) {
     }
   }
 
-  return createPortal(
+  return <>
+    {showLocationPicker && (
+      <LocationPickerSheet
+        initial={pickedLocation}
+        onConfirm={loc => { setPickedLocation(loc); setShowLocationPicker(false) }}
+        onClose={() => setShowLocationPicker(false)}
+      />
+    )}
+    {createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 2200, background: 'rgba(0,0,0,0.65)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
       <div className="slide-up" style={{ background: '#fff', borderRadius: '22px 22px 0 0', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
 
@@ -211,7 +327,8 @@ function GroupMissionCompletionSheet({ group, onClose, onComplete }) {
 
               {/* Group Photo Upload */}
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>Group photo proof <span style={{ color: '#EF4444' }}>*</span></div>
+                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 4 }}>Group selfie with evidence <span style={{ color: '#EF4444' }}>*</span></div>
+                <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 8 }}>Take a selfie together at the location showing proof you completed the mission</div>
                 <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
                 {photoUrl ? (
                   <div style={{ position: 'relative' }}>
@@ -241,6 +358,28 @@ function GroupMissionCompletionSheet({ group, onClose, onComplete }) {
                 />
               </div>
 
+              {/* Location tag */}
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>📍 Tag your location <span style={{ fontWeight: 500, color: '#9CA3AF' }}>(optional)</span></div>
+                {pickedLocation ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderRadius: 14, background: LIGHT, border: `1.5px solid ${PRIMARY}44` }}>
+                    <span style={{ fontSize: 18 }}>🗺️</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>{pickedLocation.name}</div>
+                      <div style={{ fontSize: 11, color: '#6B7280' }}>{pickedLocation.lat.toFixed(4)}, {pickedLocation.lng.toFixed(4)}</div>
+                    </div>
+                    <button onClick={() => setShowLocationPicker(true)} style={{ fontSize: 12, fontWeight: 700, color: PRIMARY, background: 'none', border: 'none', cursor: 'pointer', padding: '4px 8px' }}>Change</button>
+                    <button onClick={() => setPickedLocation(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                      <CloseIcon size={14} color="#9CA3AF" />
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => setShowLocationPicker(true)} style={{ width: '100%', padding: '12px', borderRadius: 14, border: '1.5px dashed #D1D5DB', background: '#F9FAFB', cursor: 'pointer', fontSize: 14, fontWeight: 700, color: '#4B5563', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                    <span>📍</span> Tag on map
+                  </button>
+                )}
+              </div>
+
               {/* Share to feed toggle */}
               <div
                 onClick={() => setShareToFeed(v => !v)}
@@ -251,7 +390,7 @@ function GroupMissionCompletionSheet({ group, onClose, onComplete }) {
                 </div>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700 }}>Post to community feed</div>
-                  <div style={{ fontSize: 12, color: '#6B7280' }}>Share your group photo with the SHINE community · +2 pts</div>
+                  <div style={{ fontSize: 12, color: '#6B7280' }}>Share your group selfie with the SHINE community · +2 pts</div>
                 </div>
               </div>
 
@@ -269,7 +408,8 @@ function GroupMissionCompletionSheet({ group, onClose, onComplete }) {
       </div>
     </div>,
     document.body
-  )
+  )}
+  </>
 }
 
 // ── Group Chat View ────────────────────────────────────────────────────────────
