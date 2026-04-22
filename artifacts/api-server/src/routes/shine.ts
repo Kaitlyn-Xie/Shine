@@ -1016,10 +1016,15 @@ router.post("/shine/scavenger/run-matching", async (req, res): Promise<void> => 
     id: u.id,
     name: u.name,
     text: [
-      u.interests?.join(", ") ?? "",
-      u.hiddenJournal ?? "",
+      u.country ? `From: ${u.country}` : "",
+      u.year ? `Year: ${u.year}` : "",
+      u.concentration ? `Concentration: ${u.concentration}` : "",
+      u.dorm ? `Dorm: ${u.dorm}` : "",
+      u.isOnCampus ? "Currently on campus" : "",
+      u.interests?.length ? `Interests: ${u.interests.join(", ")}` : "",
+      u.hiddenJournal ? `Journal: ${u.hiddenJournal}` : "",
       ...(postsByUser[u.id] ?? []),
-    ].join("\n").trim(),
+    ].filter(Boolean).join("\n").trim(),
   }));
 
   const groups = formGroups(userData, MIN_GROUP, MAX_GROUP);
@@ -1040,11 +1045,11 @@ router.post("/shine/scavenger/run-matching", async (req, res): Promise<void> => 
         .map((m, i) => `Student ${i + 1}: ${m.text.slice(0, 300) || "No profile info yet"}`)
         .join("\n\n");
 
-      const prompt = `You are a Harvard International Students program coordinator. These students were just AI-matched into a group based on shared interests and goals.
+      const prompt = `You are a Harvard International Students program coordinator. These students were matched into a group based on shared profile signals — country of origin, concentration, dorm, interests, journal entries, and posts.
 
 ${membersText}
 
-Write 1-2 friendly sentences (max 60 words) explaining why this group was matched. Focus on shared themes in their writing. Start with "You were matched because..." and do NOT mention names or identifying info.`;
+Write 1-2 friendly sentences (max 60 words) explaining why this group was matched. Focus on shared themes: similar backgrounds, academic interests, dorm proximity, or personal goals. Start with "You were matched because..." and do NOT mention names or identifying info.`;
 
       summary = (await callOpenAI(prompt)).trim() || summary;
     } catch (_) { /* use default */ }
