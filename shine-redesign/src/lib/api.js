@@ -59,10 +59,18 @@ export const api = {
 
   // ── Scavenger Matching ────────────────────────────────────────────────────
   setScavengerOptIn: (optIn) => request("POST", "/scavenger/opt-in", { optIn }),
-  getScavengerMissions: () => request("GET", "/scavenger/missions"),
-  joinScavengerMission: (id) => request("POST", `/scavenger/missions/${id}/join`),
-  leaveScavengerMission: (id) => request("DELETE", `/scavenger/missions/${id}/join`),
+  // Queue
+  joinMatchQueue: () => request("POST", "/scavenger/queue"),
+  leaveMatchQueue: () => request("DELETE", "/scavenger/queue"),
+  getQueueStatus: () => request("GET", "/scavenger/queue/status"),
+  // Groups
   getMyGroups: () => request("GET", "/scavenger/my-groups"),
   getMyParticipation: () => request("GET", "/scavenger/my-participation"),
-  runMatching: (missionId) => request("POST", `/scavenger/missions/${missionId}/run-matching`),
+  runMatching: () => request("POST", "/scavenger/run-matching"),
+  // Group chat
+  getGroupChat: (groupId) => request("GET", `/scavenger/groups/${groupId}/chat`),
+  sendGroupMessage: (groupId, content) => request("POST", `/scavenger/groups/${groupId}/chat`, { content }),
+  chooseGroupMission: (groupId, missionId, missionTitle) => request("POST", `/scavenger/groups/${groupId}/choose-mission`, { missionId, missionTitle }),
+  // Available missions (for group to pick from)
+  getScavengerMissions: () => request("GET", "/scavenger/missions"),
 };

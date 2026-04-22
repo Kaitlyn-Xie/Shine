@@ -75,9 +75,10 @@ export const shineQuestionAnswersTable = pgTable("shine_question_answers", {
 });
 
 // ── Scavenger Hunt Matching ───────────────────────────────────────────────────
-// These "match missions" are separate from the gamification missions above.
-// They represent real-world group activities that students opt into for matching.
+// New flow: users join a global queue → AI matches by shared interests →
+// group chat auto-created → group picks a mission together.
 
+// (Legacy) individual missions available for groups to choose from
 export const shineMatchMissionsTable = pgTable("shine_match_missions", {
   id: serial("id").primaryKey(),
   title: text("title").notNull(),
@@ -88,7 +89,7 @@ export const shineMatchMissionsTable = pgTable("shine_match_missions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Tracks which users have joined which match missions (waiting for grouping)
+// (Legacy) per-mission participants kept for compatibility
 export const shineMissionParticipantsTable = pgTable("shine_mission_participants", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
@@ -96,12 +97,38 @@ export const shineMissionParticipantsTable = pgTable("shine_mission_participants
   joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-// Stores the matched groups per mission
+// Global matching queue — users who opted in and are waiting to be grouped
+export const shineMatchQueueTable = pgTable("shine_match_queue", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().unique(),
+  joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Matched groups — now mission-agnostic at creation; group picks mission afterward
 export const shineMatchGroupsTable = pgTable("shine_match_groups", {
   id: serial("id").primaryKey(),
-  missionId: integer("mission_id").notNull(),
-  // Stored as comma-separated user IDs for simplicity with Drizzle/pg
+  // Legacy: missionId kept as nullable for old records
+  missionId: integer("mission_id"),
+  // Stored as comma-separated user IDs
   memberIds: text("member_ids").notNull(),
   matchingSummary: text("matching_summary"),
+  // Mission the group chose together (from the frontend missions list)
+  chosenMissionId: text("chosen_mission_id"),
+  chosenMissionTitle: text("chosen_mission_title"),
+  // 'active' | 'mission_chosen' | 'completed'
+  status: text("status").notNull().default("active"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// Group chat messages for each matched group
+export const shineMatchGroupMessagesTable = pgTable("shine_match_group_messages", {
+  id: serial("id").primaryKey(),
+  groupId: integer("group_id").notNull(),
+  // null = system message
+  userId: integer("user_id"),
+  senderName: text("sender_name").notNull(),
+  content: text("content").notNull(),
+  // 'system' | 'user'
+  messageType: text("message_type").notNull().default("user"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

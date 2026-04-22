@@ -1,20 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from '../lib/api'
 import { CloseIcon, CheckIcon } from './Icons'
+import { MISSIONS } from '../data/missions'
 
 const PRIMARY = '#1B8757'
 const GRADIENT = 'linear-gradient(135deg, #2ECC87, #1B8757)'
 const LIGHT = '#E8F8F0'
+const PURPLE = '#7C3AED'
+const PURPLE_LIGHT = '#EDE9FE'
 
-const iconBtn = {
-  background: 'none', border: 'none', cursor: 'pointer', padding: 6,
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-}
-
-// ── Country flag helper ────────────────────────────────────────────────────────
-function countryInitials(country) {
-  if (!country) return '🌍'
+// ── Helpers ────────────────────────────────────────────────────────────────────
+function countryFlag(country) {
   const map = { 'China': '🇨🇳', 'India': '🇮🇳', 'South Korea': '🇰🇷', 'Canada': '🇨🇦',
     'United Kingdom': '🇬🇧', 'Germany': '🇩🇪', 'France': '🇫🇷', 'Japan': '🇯🇵',
     'Brazil': '🇧🇷', 'Mexico': '🇲🇽', 'Australia': '🇦🇺', 'Singapore': '🇸🇬',
@@ -23,13 +20,12 @@ function countryInitials(country) {
   return map[country] ?? '🌏'
 }
 
-// ── Avatar ─────────────────────────────────────────────────────────────────────
-function Avatar({ name, size = 36 }) {
+function Avatar({ name, size = 36, color = GRADIENT }) {
   const initials = name ? name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() : '?'
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: GRADIENT, color: '#fff', display: 'flex', alignItems: 'center',
+      background: color, color: '#fff', display: 'flex', alignItems: 'center',
       justifyContent: 'center', fontSize: size * 0.36, fontWeight: 800,
     }}>
       {initials}
@@ -37,111 +33,264 @@ function Avatar({ name, size = 36 }) {
   )
 }
 
-// ── Match Info Sheet ───────────────────────────────────────────────────────────
-function GroupDetailSheet({ group, onClose }) {
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 2100, background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-      <div className="slide-up" style={{ background: '#fff', borderRadius: '22px 22px 0 0', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px', flexShrink: 0 }}>
-          <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
-        </div>
-        <div style={{ overflowY: 'auto', flex: 1, padding: '0 20px 32px' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
-            <div>
-              <div style={{ fontSize: 22, marginBottom: 4 }}>🤝</div>
-              <div style={{ fontSize: 17, fontWeight: 900, color: '#1A1A1A' }}>{group.mission?.title}</div>
-            </div>
-            <button onClick={onClose} style={iconBtn}><CloseIcon size={20} color="#9A9A9A" /></button>
-          </div>
-
-          {group.matchingSummary && (
-            <div style={{ background: LIGHT, borderRadius: 14, padding: '14px 16px', marginBottom: 20 }}>
-              <div style={{ fontSize: 12, fontWeight: 800, color: PRIMARY, marginBottom: 6, letterSpacing: '0.3px' }}>✨ WHY YOU WERE MATCHED</div>
-              <p style={{ fontSize: 14, color: '#2D5A3D', lineHeight: 1.7, margin: 0 }}>{group.matchingSummary}</p>
-            </div>
-          )}
-
-          <div style={{ fontSize: 13, fontWeight: 800, color: '#6B7280', marginBottom: 12, letterSpacing: '0.3px' }}>YOUR GROUP ({group.members.length} members)</div>
-          {group.members.map(m => (
-            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, padding: '10px 14px', background: '#F9FAFB', borderRadius: 14 }}>
-              <Avatar name={m.name} size={40} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 14 }}>{m.name}</div>
-                {m.country && <div style={{ fontSize: 12, color: '#6B7280' }}>{countryInitials(m.country)} {m.country}</div>}
-              </div>
-            </div>
-          ))}
-
-          <div style={{ background: '#FFFBEB', borderRadius: 14, padding: '12px 16px', marginTop: 4 }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: '#92400E', marginBottom: 6 }}>📋 NEXT STEPS</div>
-            <p style={{ fontSize: 13, color: '#78350F', lineHeight: 1.6, margin: 0 }}>
-              Reach out to your group through the Chat tab to coordinate! You can also share contact info and plan your mission together.
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+function timeAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return 'now'
+  if (m < 60) return `${m}m`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h`
+  return `${Math.floor(h / 24)}d`
 }
 
-// ── Mission Card ───────────────────────────────────────────────────────────────
-function MissionCard({ mission, joined, optedIn, onOptIn, onJoin, onLeave }) {
+// ── Mission Chooser Sheet ──────────────────────────────────────────────────────
+function MissionChooserSheet({ groupId, onChosen, onClose }) {
   const [loading, setLoading] = useState(false)
+  const [chosen, setChosen] = useState(null)
 
-  async function handleToggle() {
-    if (!optedIn) { await onOptIn(); return }
+  // Use the top-level MISSIONS from the game data
+  const available = MISSIONS.filter(m => m.type === 'location' || m.type === 'creative' || m.type === 'social').slice(0, 12)
+
+  async function handleChoose(mission) {
+    setChosen(mission.id)
     setLoading(true)
     try {
-      if (joined) await onLeave()
-      else await onJoin()
+      await api.chooseGroupMission(groupId, mission.id, mission.title)
+      onChosen({ missionId: mission.id, missionTitle: mission.title })
+    } catch (e) {
+      console.error(e)
     } finally {
       setLoading(false)
     }
   }
 
-  const btnLabel = loading ? '…'
-    : !optedIn ? '🔎 Turn on matching to join'
-    : joined ? '✓ Joined — Leave'
-    : 'Join this Mission'
-
-  return (
-    <div style={{
-      background: '#fff', borderRadius: 18, padding: '16px 18px', marginBottom: 12,
-      boxShadow: '0 2px 12px rgba(0,0,0,0.07)',
-      border: `1.5px solid ${joined && optedIn ? PRIMARY + '55' : '#F0F0F0'}`,
-      transition: 'border-color 0.2s',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <div style={{
-          width: 48, height: 48, borderRadius: 14, flexShrink: 0,
-          background: joined && optedIn ? LIGHT : '#F3F4F6',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
-        }}>
-          {joined && optedIn ? '✅' : '🗺️'}
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 2200, background: 'rgba(0,0,0,0.6)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+      <div className="slide-up" style={{ background: '#fff', borderRadius: '22px 22px 0 0', maxHeight: '82vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
+          <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 4 }}>{mission.title}</div>
-          <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.6 }}>{mission.description}</div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: '#9A9A9A', marginTop: 8 }}>
-            👥 Min {mission.minGroupSize} students per group
-            {mission.maxGroupSize ? ` · Max ${mission.maxGroupSize}` : ''}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 20px 14px', flexShrink: 0 }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 900 }}>Choose Your Mission</div>
+            <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>Pick one for your whole group to do together</div>
           </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+            <CloseIcon size={20} color="#9A9A9A" />
+          </button>
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1, padding: '0 16px 32px' }}>
+          {available.map(m => (
+            <div
+              key={m.id}
+              onClick={() => !loading && handleChoose(m)}
+              style={{
+                background: chosen === m.id ? LIGHT : '#F9FAFB',
+                borderRadius: 16, padding: '14px 16px', marginBottom: 10,
+                border: `1.5px solid ${chosen === m.id ? PRIMARY + '55' : '#F0F0F0'}`,
+                cursor: loading ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12,
+                opacity: loading && chosen !== m.id ? 0.5 : 1, transition: 'all 0.15s',
+              }}
+            >
+              <div style={{ fontSize: 28, width: 42, height: 42, borderRadius: 12, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>{m.emoji}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{m.title}</div>
+                <div style={{ fontSize: 12, color: '#6B7280', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{m.desc}</div>
+              </div>
+              {chosen === m.id && loading ? (
+                <div style={{ fontSize: 18 }}>⏳</div>
+              ) : (
+                <div style={{ color: chosen === m.id ? PRIMARY : '#D1D5DB', fontSize: 20, fontWeight: 900 }}>›</div>
+              )}
+            </div>
+          ))}
         </div>
       </div>
-      <button
-        onClick={handleToggle}
-        disabled={loading}
-        style={{
-          width: '100%', marginTop: 14, padding: '11px 0', borderRadius: 12,
-          border: joined && optedIn ? `1.5px solid ${PRIMARY}` : 'none',
-          background: !optedIn ? '#F3F4F6' : joined ? '#fff' : GRADIENT,
-          color: !optedIn ? '#6B7280' : joined ? PRIMARY : '#fff',
-          fontWeight: 800, fontSize: 14, cursor: loading ? 'default' : 'pointer',
-          opacity: loading ? 0.7 : 1, transition: 'all 0.2s',
-        }}
-      >
-        {btnLabel}
-      </button>
+    </div>,
+    document.body
+  )
+}
+
+// ── Group Chat View ────────────────────────────────────────────────────────────
+function GroupChat({ group, currentUser, onBack, onMissionChosen }) {
+  const [messages, setMessages] = useState([])
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [showMissions, setShowMissions] = useState(false)
+  const [loadingChat, setLoadingChat] = useState(true)
+  const bottomRef = useRef(null)
+  const pollRef = useRef(null)
+
+  useEffect(() => {
+    loadChat()
+    pollRef.current = setInterval(loadChat, 6000)
+    return () => clearInterval(pollRef.current)
+  }, [group.id])
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  async function loadChat() {
+    try {
+      const msgs = await api.getGroupChat(group.id)
+      setMessages(msgs || [])
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setLoadingChat(false)
+    }
+  }
+
+  async function handleSend(e) {
+    e.preventDefault()
+    if (!text.trim() || sending) return
+    const content = text.trim()
+    setText('')
+    setSending(true)
+    try {
+      const { message } = await api.sendGroupMessage(group.id, content)
+      setMessages(prev => [...prev, message])
+    } catch (e) {
+      setText(content)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  function handleMissionChosen(chosen) {
+    setShowMissions(false)
+    onMissionChosen(chosen)
+    // The run-matching system message will appear on next poll
+  }
+
+  const memberNames = group.members.map(m => m.name.split(' ')[0]).join(', ')
+  const hasMission = !!group.chosenMissionId
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#F9FAFB' }}>
+      {/* Chat Header */}
+      <div style={{ background: '#fff', borderBottom: '1px solid var(--border)', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+          <button onClick={onBack} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 20, padding: '2px 6px', color: PRIMARY }}>←</button>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>Your Match Group</div>
+            <div style={{ fontSize: 12, color: '#6B7280', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+              {memberNames}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: -6 }}>
+            {group.members.slice(0, 4).map((m, i) => (
+              <div key={m.id} style={{ marginLeft: i > 0 ? -8 : 0, zIndex: 4 - i }}>
+                <Avatar name={m.name} size={28} />
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Chosen mission banner */}
+        {hasMission && (
+          <div style={{ background: LIGHT, borderTop: `1px solid ${PRIMARY}22`, padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 16 }}>🗺️</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: PRIMARY, letterSpacing: '0.3px' }}>CHOSEN MISSION</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#1A1A1A' }}>{group.chosenMissionTitle}</div>
+            </div>
+            <button
+              onClick={() => setShowMissions(true)}
+              style={{ fontSize: 11, fontWeight: 700, color: PRIMARY, background: 'none', border: `1px solid ${PRIMARY}55`, borderRadius: 8, padding: '4px 8px', cursor: 'pointer' }}
+            >
+              Change
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {loadingChat ? (
+          <div style={{ textAlign: 'center', color: '#9A9A9A', padding: 24, fontSize: 13 }}>Loading chat…</div>
+        ) : messages.length === 0 ? (
+          <div style={{ textAlign: 'center', color: '#9A9A9A', padding: 24, fontSize: 13 }}>No messages yet. Say hi!</div>
+        ) : messages.map(msg => (
+          <MessageBubble key={msg.id} msg={msg} />
+        ))}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Choose Mission CTA (if no mission yet) */}
+      {!hasMission && (
+        <div style={{ background: '#fff', borderTop: '1px solid var(--border)', padding: '12px 16px', flexShrink: 0 }}>
+          <button
+            onClick={() => setShowMissions(true)}
+            style={{ width: '100%', padding: '12px', borderRadius: 14, border: 'none', background: GRADIENT, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 14px rgba(27,135,87,0.3)' }}
+          >
+            🗺️ Choose Your Group Mission
+          </button>
+        </div>
+      )}
+
+      {/* Message Input */}
+      <form onSubmit={handleSend} style={{ background: '#fff', borderTop: '1px solid var(--border)', padding: '10px 12px', display: 'flex', gap: 8, flexShrink: 0, paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
+        <input
+          value={text}
+          onChange={e => setText(e.target.value)}
+          placeholder="Message your group…"
+          style={{ flex: 1, padding: '10px 14px', borderRadius: 22, border: '1.5px solid var(--border)', fontSize: 14, outline: 'none', background: '#F9FAFB', fontFamily: 'inherit' }}
+        />
+        <button
+          type="submit"
+          disabled={!text.trim() || sending}
+          style={{ width: 42, height: 42, borderRadius: '50%', border: 'none', background: text.trim() ? GRADIENT : '#E5E7EB', color: '#fff', cursor: text.trim() ? 'pointer' : 'default', fontSize: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'background 0.15s' }}
+        >
+          ↑
+        </button>
+      </form>
+
+      {showMissions && (
+        <MissionChooserSheet groupId={group.id} onChosen={handleMissionChosen} onClose={() => setShowMissions(false)} />
+      )}
+    </div>
+  )
+}
+
+function MessageBubble({ msg }) {
+  const isSystem = msg.messageType === 'system'
+  const isMe = msg.isMe
+
+  if (isSystem) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '4px 0' }}>
+        <div style={{ background: PURPLE_LIGHT, borderRadius: 14, padding: '10px 14px', maxWidth: '88%', textAlign: 'center' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: PURPLE, marginBottom: 4, letterSpacing: '0.3px' }}>✨ SHINE</div>
+          <div style={{ fontSize: 13, color: '#4B2997', lineHeight: 1.6, fontWeight: 500 }}>
+            {msg.content.replace(/\*\*(.*?)\*\*/g, '$1')}
+          </div>
+          <div style={{ fontSize: 10, color: '#9A9A9A', marginTop: 4 }}>{timeAgo(msg.createdAt)}</div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 8 }}>
+      {!isMe && (
+        <Avatar name={msg.senderName} size={28} />
+      )}
+      <div style={{ maxWidth: '72%' }}>
+        {!isMe && <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', marginBottom: 3, marginLeft: 4 }}>{msg.senderName}</div>}
+        <div style={{
+          background: isMe ? PRIMARY : '#fff',
+          color: isMe ? '#fff' : '#1A1A1A',
+          borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+          padding: '9px 14px', fontSize: 14, lineHeight: 1.5,
+          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+        }}>
+          {msg.content}
+        </div>
+        <div style={{ fontSize: 10, color: '#9A9A9A', marginTop: 3, textAlign: isMe ? 'right' : 'left', paddingLeft: isMe ? 0 : 4 }}>
+          {timeAgo(msg.createdAt)}
+        </div>
+      </div>
     </div>
   )
 }
@@ -150,29 +299,26 @@ function MissionCard({ mission, joined, optedIn, onOptIn, onJoin, onLeave }) {
 export default function ScavengerMatch({ user }) {
   const [isOptIn, setIsOptIn] = useState(user?.isScavengerOptIn ?? false)
   const [optInLoading, setOptInLoading] = useState(false)
-  const [missions, setMissions] = useState([])
-  const [joinedIds, setJoinedIds] = useState(new Set())
+  const [inQueue, setInQueue] = useState(false)
+  const [queueSize, setQueueSize] = useState(0)
   const [myGroups, setMyGroups] = useState([])
   const [selectedGroup, setSelectedGroup] = useState(null)
-  const [runningMatch, setRunningMatch] = useState(null)
+  const [runningMatch, setRunningMatch] = useState(false)
   const [matchResult, setMatchResult] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadAll()
-  }, [])
+  useEffect(() => { loadAll() }, [])
 
   async function loadAll() {
     setLoading(true)
     try {
-      const [missions, participation, groups] = await Promise.all([
-        api.getScavengerMissions(),
+      const [participation, groups] = await Promise.all([
         api.getMyParticipation(),
         api.getMyGroups(),
       ])
-      setMissions(missions || [])
       setIsOptIn(participation?.isScavengerOptIn ?? false)
-      setJoinedIds(new Set(participation?.joinedMissionIds ?? []))
+      setInQueue(participation?.inQueue ?? false)
+      setQueueSize(participation?.queueSize ?? 0)
       setMyGroups(groups || [])
     } catch (e) {
       console.error('ScavengerMatch load error', e)
@@ -187,37 +333,62 @@ export default function ScavengerMatch({ user }) {
       const newVal = !isOptIn
       await api.setScavengerOptIn(newVal)
       setIsOptIn(newVal)
+      if (!newVal && inQueue) {
+        await api.leaveMatchQueue()
+        setInQueue(false)
+      }
     } finally {
       setOptInLoading(false)
     }
   }
 
-  async function handleJoin(missionId) {
-    await api.joinScavengerMission(missionId)
-    setJoinedIds(prev => new Set([...prev, missionId]))
+  async function handleJoinQueue() {
+    try {
+      const result = await api.joinMatchQueue()
+      setInQueue(true)
+      setQueueSize(result?.queueSize ?? queueSize + 1)
+    } catch (e) {
+      console.error(e)
+    }
   }
 
-  async function handleLeave(missionId) {
-    await api.leaveScavengerMission(missionId)
-    setJoinedIds(prev => { const s = new Set(prev); s.delete(missionId); return s })
+  async function handleLeaveQueue() {
+    try {
+      await api.leaveMatchQueue()
+      setInQueue(false)
+      setQueueSize(prev => Math.max(0, prev - 1))
+    } catch (e) {
+      console.error(e)
+    }
   }
 
-  async function handleRunMatch(missionId) {
-    setRunningMatch(missionId)
+  async function handleRunMatch() {
+    setRunningMatch(true)
     setMatchResult(null)
     try {
-      const result = await api.runMatching(missionId)
-      setMatchResult({ missionId, ...result })
+      const result = await api.runMatching()
+      setMatchResult(result)
       if (result.groupsCreated > 0) {
-        // Reload groups after successful match
         const groups = await api.getMyGroups()
         setMyGroups(groups || [])
+        const participation = await api.getMyParticipation()
+        setInQueue(participation?.inQueue ?? false)
+        setQueueSize(participation?.queueSize ?? 0)
       }
     } catch (e) {
-      setMatchResult({ missionId, error: e.message })
+      setMatchResult({ error: e.message })
     } finally {
-      setRunningMatch(null)
+      setRunningMatch(false)
     }
+  }
+
+  function handleMissionChosen(chosen) {
+    setMyGroups(prev => prev.map(g =>
+      g.id === selectedGroup.id
+        ? { ...g, chosenMissionId: chosen.missionId, chosenMissionTitle: chosen.missionTitle, status: 'mission_chosen' }
+        : g
+    ))
+    setSelectedGroup(prev => prev ? { ...prev, chosenMissionId: chosen.missionId, chosenMissionTitle: chosen.missionTitle, status: 'mission_chosen' } : null)
   }
 
   if (loading) {
@@ -228,148 +399,171 @@ export default function ScavengerMatch({ user }) {
     )
   }
 
-  const groupsByMission = {}
-  for (const g of myGroups) {
-    if (!groupsByMission[g.missionId]) groupsByMission[g.missionId] = []
-    groupsByMission[g.missionId].push(g)
+  // ── Group Chat View ──
+  if (selectedGroup) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 200px)', minHeight: 400 }}>
+        <GroupChat
+          group={selectedGroup}
+          currentUser={user}
+          onBack={() => { setSelectedGroup(null); loadAll() }}
+          onMissionChosen={handleMissionChosen}
+        />
+      </div>
+    )
   }
 
+  // ── Main List View ──
   return (
-    <div style={{ paddingBottom: 24 }}>
-      {/* Opt-In Toggle Card */}
-      <div style={{ margin: '0 16px 20px', background: isOptIn ? LIGHT : '#F9FAFB', borderRadius: 20, padding: '18px 20px', border: `1.5px solid ${isOptIn ? PRIMARY + '44' : '#E5E7EB'}`, transition: 'all 0.3s' }}>
+    <div style={{ paddingBottom: 32 }}>
+
+      {/* ── Opt-In Toggle ── */}
+      <div style={{ margin: '0 16px 16px', background: isOptIn ? LIGHT : '#F9FAFB', borderRadius: 20, padding: '18px 20px', border: `1.5px solid ${isOptIn ? PRIMARY + '44' : '#E5E7EB'}`, transition: 'all 0.3s' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 800, fontSize: 16, color: isOptIn ? PRIMARY : '#1A1A1A', marginBottom: 4 }}>
-              {isOptIn ? '✅ You\'re opted in!' : '🔎 Find Your Match Group'}
+              {isOptIn ? '✅ Matching enabled' : '🤝 Find Your Match Group'}
             </div>
             <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.5 }}>
               {isOptIn
-                ? 'You\'ll be matched into a group for any missions you join. Turn off to opt out.'
-                : 'Let AI match you with other students for group scavenger hunt missions based on your interests and goals.'}
+                ? 'AI will match you with students who share your interests. Join the queue below.'
+                : 'Let AI match you with other Harvard international students based on your interests and hidden journal.'}
             </div>
           </div>
           <button
             onClick={toggleOptIn}
             disabled={optInLoading}
-            style={{
-              flexShrink: 0, width: 52, height: 30, borderRadius: 15, border: 'none',
-              background: isOptIn ? PRIMARY : '#D1D5DB',
-              cursor: optInLoading ? 'default' : 'pointer',
-              position: 'relative', transition: 'background 0.2s', opacity: optInLoading ? 0.7 : 1,
-            }}
+            style={{ flexShrink: 0, width: 52, height: 30, borderRadius: 15, border: 'none', background: isOptIn ? PRIMARY : '#D1D5DB', cursor: optInLoading ? 'default' : 'pointer', position: 'relative', transition: 'background 0.2s', opacity: optInLoading ? 0.7 : 1 }}
           >
-            <div style={{
-              position: 'absolute', top: 3, left: isOptIn ? 25 : 3,
-              width: 24, height: 24, borderRadius: '50%', background: '#fff',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s',
-            }} />
+            <div style={{ position: 'absolute', top: 3, left: isOptIn ? 25 : 3, width: 24, height: 24, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
           </button>
         </div>
       </div>
 
-      {/* My Groups Section */}
-      {myGroups.length > 0 && (
+      {/* ── Queue Section ── */}
+      {isOptIn && (
         <div style={{ margin: '0 16px 20px' }}>
-          <div style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', marginBottom: 12 }}>🤝 My Groups</div>
-          {myGroups.map(g => (
-            <div
-              key={g.id}
-              onClick={() => setSelectedGroup(g)}
-              style={{
-                background: '#fff', borderRadius: 16, padding: '14px 16px', marginBottom: 10,
-                boxShadow: '0 2px 10px rgba(0,0,0,0.07)', border: `1.5px solid ${PRIMARY}33`,
-                cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'center',
-              }}
-            >
-              <div style={{ fontSize: 28 }}>🤝</div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>{g.mission?.title ?? 'Mission'}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ display: 'flex', gap: -6 }}>
-                    {(g.members || []).slice(0, 4).map((m, i) => (
-                      <div key={m.id} style={{ marginLeft: i > 0 ? -8 : 0, zIndex: 4 - i }}>
-                        <Avatar name={m.name} size={26} />
-                      </div>
-                    ))}
-                  </div>
-                  <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 600 }}>
-                    {g.members.length} member{g.members.length !== 1 ? 's' : ''}
-                  </span>
+          {inQueue ? (
+            <div style={{ background: PURPLE_LIGHT, borderRadius: 18, padding: '16px 18px', border: `1.5px solid ${PURPLE}33` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <div style={{ fontSize: 24 }}>⏳</div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: PURPLE }}>You're in the queue!</div>
+                  <div style={{ fontSize: 12, color: '#6B7280' }}>{queueSize} student{queueSize !== 1 ? 's' : ''} waiting · AI matches daily</div>
                 </div>
-                {g.matchingSummary && (
-                  <div style={{ fontSize: 12, color: PRIMARY, fontWeight: 600, marginTop: 4, display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                    ✨ {g.matchingSummary}
-                  </div>
-                )}
               </div>
-              <div style={{ color: '#C0C0C0', fontSize: 18 }}>›</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={handleRunMatch}
+                  disabled={runningMatch}
+                  style={{ flex: 1, padding: '10px 0', borderRadius: 12, border: 'none', background: PURPLE, color: '#fff', fontWeight: 800, fontSize: 13, cursor: runningMatch ? 'default' : 'pointer', opacity: runningMatch ? 0.7 : 1 }}
+                >
+                  {runningMatch ? '⏳ Matching…' : '🤖 Run AI Matching Now'}
+                </button>
+                <button
+                  onClick={handleLeaveQueue}
+                  style={{ padding: '10px 14px', borderRadius: 12, border: `1.5px solid ${PURPLE}44`, background: '#fff', color: PURPLE, fontWeight: 700, fontSize: 13, cursor: 'pointer' }}
+                >
+                  Leave
+                </button>
+              </div>
+              {matchResult && (
+                <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 12, background: matchResult.error ? '#FEF2F2' : LIGHT, color: matchResult.error ? '#DC2626' : PRIMARY, fontSize: 13, fontWeight: 600 }}>
+                  {matchResult.error ? `Error: ${matchResult.error}` : `✅ ${matchResult.message}`}
+                </div>
+              )}
             </div>
+          ) : (
+            <button
+              onClick={handleJoinQueue}
+              style={{ width: '100%', padding: '16px', borderRadius: 18, border: 'none', background: GRADIENT, color: '#fff', fontWeight: 800, fontSize: 15, cursor: 'pointer', boxShadow: '0 4px 16px rgba(27,135,87,0.3)' }}
+            >
+              🙋 Join Matching Queue
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── My Groups ── */}
+      {myGroups.length > 0 && (
+        <div style={{ margin: '0 16px' }}>
+          <div style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', marginBottom: 12 }}>🤝 My Match Groups</div>
+          {myGroups.map(g => (
+            <GroupCard key={g.id} group={g} onOpen={() => setSelectedGroup(g)} />
           ))}
         </div>
       )}
 
-      {/* Missions List — always visible */}
-      <div style={{ margin: '0 16px' }}>
-        <div style={{ fontSize: 14, fontWeight: 800, color: '#1A1A1A', marginBottom: 4 }}>🗺️ Group Missions</div>
-        <div style={{ fontSize: 13, color: '#6B7280', marginBottom: 14 }}>
-          {isOptIn
-            ? "Join missions you'd like to do with a group. You'll be AI-matched when enough students sign up."
-            : "Turn on matching above, then join any mission below to get matched with a group."}
+      {/* ── Empty State ── */}
+      {!isOptIn && myGroups.length === 0 && (
+        <div style={{ margin: '0 16px', textAlign: 'center', padding: '40px 20px' }}>
+          <div style={{ fontSize: 56, marginBottom: 16 }}>🌟</div>
+          <div style={{ fontSize: 17, fontWeight: 800, color: '#1A1A1A', marginBottom: 8 }}>Get matched with your group</div>
+          <div style={{ fontSize: 14, color: '#6B7280', lineHeight: 1.7 }}>
+            Turn on matching, join the queue, and AI will group you with Harvard international students who share your interests. Once matched, your group picks a mission together!
+          </div>
         </div>
-        {missions.length === 0 && (
-          <div style={{ textAlign: 'center', padding: 32, color: '#9A9A9A', fontSize: 14 }}>No missions available yet.</div>
-        )}
-        {missions.map(m => (
-          <div key={m.id}>
-            <MissionCard
-              mission={m}
-              joined={joinedIds.has(m.id)}
-              optedIn={isOptIn}
-              onOptIn={toggleOptIn}
-              onJoin={() => handleJoin(m.id)}
-              onLeave={() => handleLeave(m.id)}
-            />
-            {/* Run Matching button — visible when joined + opted in + no group yet */}
-            {isOptIn && joinedIds.has(m.id) && !groupsByMission[m.id]?.length && (
-              <div style={{ marginBottom: 14, marginTop: -4 }}>
-                <button
-                  onClick={() => handleRunMatch(m.id)}
-                  disabled={runningMatch === m.id}
-                  style={{
-                    width: '100%', padding: '10px 0', borderRadius: 12, border: `1.5px dashed ${PRIMARY}66`,
-                    background: '#fff', color: PRIMARY, fontWeight: 700, fontSize: 13,
-                    cursor: runningMatch === m.id ? 'default' : 'pointer',
-                    opacity: runningMatch === m.id ? 0.7 : 1,
-                  }}
-                >
-                  {runningMatch === m.id ? '⏳ Running AI matching…' : '🤖 Try to form groups now'}
-                </button>
-                {matchResult?.missionId === m.id && (
-                  <div style={{
-                    marginTop: 8, padding: '10px 14px', borderRadius: 12,
-                    background: matchResult.error ? '#FEF2F2' : LIGHT,
-                    color: matchResult.error ? '#DC2626' : PRIMARY,
-                    fontSize: 13, fontWeight: 600,
-                  }}>
-                    {matchResult.error
-                      ? `Error: ${matchResult.error}`
-                      : matchResult.groupsCreated > 0
-                        ? `✅ ${matchResult.message}`
-                        : `ℹ️ ${matchResult.message}`}
-                  </div>
-                )}
-              </div>
-            )}
+      )}
+
+      {isOptIn && !inQueue && myGroups.length === 0 && (
+        <div style={{ margin: '0 16px', textAlign: 'center', padding: '24px 20px' }}>
+          <div style={{ fontSize: 44, marginBottom: 10 }}>👆</div>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#1A1A1A', marginBottom: 6 }}>Join the queue above</div>
+          <div style={{ fontSize: 13, color: '#6B7280', lineHeight: 1.6 }}>
+            Once enough students join, AI will match you into a group based on shared interests — then you'll get a group chat to pick your mission together.
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Group Card (list item) ─────────────────────────────────────────────────────
+function GroupCard({ group, onOpen }) {
+  const unread = !group.chosenMissionId && group.latestMessage
+
+  return (
+    <div
+      onClick={onOpen}
+      style={{
+        background: '#fff', borderRadius: 18, padding: '14px 16px', marginBottom: 12,
+        boxShadow: '0 2px 10px rgba(0,0,0,0.07)',
+        border: `1.5px solid ${unread ? PRIMARY + '44' : '#F0F0F0'}`,
+        cursor: 'pointer', display: 'flex', gap: 12, alignItems: 'center',
+      }}
+    >
+      {/* Avatars stack */}
+      <div style={{ display: 'flex', flexShrink: 0 }}>
+        {group.members.slice(0, 3).map((m, i) => (
+          <div key={m.id} style={{ marginLeft: i > 0 ? -10 : 0, zIndex: 3 - i }}>
+            <Avatar name={m.name} size={38} />
           </div>
         ))}
+        {group.members.length > 3 && (
+          <div style={{ marginLeft: -10, zIndex: 0, width: 38, height: 38, borderRadius: '50%', background: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#6B7280', border: '2px solid #fff' }}>
+            +{group.members.length - 3}
+          </div>
+        )}
       </div>
-
-      {/* Group Detail Sheet */}
-      {selectedGroup && createPortal(
-        <GroupDetailSheet group={selectedGroup} onClose={() => setSelectedGroup(null)} />,
-        document.body
-      )}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+          <div style={{ fontWeight: 800, fontSize: 14, color: '#1A1A1A' }}>
+            {group.members.map(m => m.name.split(' ')[0]).join(', ')}
+          </div>
+          {group.chosenMissionId && (
+            <span style={{ fontSize: 10, fontWeight: 800, background: LIGHT, color: PRIMARY, padding: '2px 7px', borderRadius: 8 }}>🗺️ Mission chosen</span>
+          )}
+        </div>
+        {group.latestMessage ? (
+          <div style={{ fontSize: 13, color: '#6B7280', display: '-webkit-box', WebkitLineClamp: 1, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            {group.latestMessage.messageType === 'system' ? '✨ ' : `${group.latestMessage.senderName}: `}
+            {group.latestMessage.content.replace(/\*\*(.*?)\*\*/g, '$1').slice(0, 60)}
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: '#9A9A9A' }}>No messages yet</div>
+        )}
+      </div>
+      <div style={{ color: '#C0C0C0', fontSize: 20 }}>›</div>
     </div>
   )
 }

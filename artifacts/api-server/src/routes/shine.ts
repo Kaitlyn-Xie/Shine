@@ -11,6 +11,8 @@ import {
   shineMatchMissionsTable,
   shineMissionParticipantsTable,
   shineMatchGroupsTable,
+  shineMatchQueueTable,
+  shineMatchGroupMessagesTable,
 } from "@workspace/db";
 
 const router: IRouter = Router();
@@ -664,9 +666,50 @@ router.post("/shine/scavenger/opt-in", async (req, res): Promise<void> => {
   res.json({ ok: true, isScavengerOptIn: optIn });
 });
 
-// ── Match Missions ────────────────────────────────────────────────────────────
+// ── Matching Queue ────────────────────────────────────────────────────────────
 
-// List all active matching missions
+// Join the global matching queue
+router.post("/shine/scavenger/queue", async (req, res): Promise<void> => {
+  const sessionToken = getSessionId(req);
+  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const user = await getShineUser(sessionToken);
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  await db
+    .insert(shineMatchQueueTable)
+    .values({ userId: user.id })
+    .onConflictDoNothing();
+
+  // Count queue members
+  const queue = await db.select().from(shineMatchQueueTable);
+  res.json({ ok: true, queueSize: queue.length });
+});
+
+// Leave the matching queue
+router.delete("/shine/scavenger/queue", async (req, res): Promise<void> => {
+  const sessionToken = getSessionId(req);
+  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const user = await getShineUser(sessionToken);
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  await db.delete(shineMatchQueueTable).where(eq(shineMatchQueueTable.userId, user.id));
+  res.json({ ok: true });
+});
+
+// Get queue status (count + whether current user is in queue)
+router.get("/shine/scavenger/queue/status", async (req, res): Promise<void> => {
+  const sessionToken = getSessionId(req);
+  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const user = await getShineUser(sessionToken);
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const queue = await db.select().from(shineMatchQueueTable);
+  const inQueue = queue.some(q => q.userId === user.id);
+  res.json({ queueSize: queue.length, inQueue });
+});
+
+// ── Available Missions (for groups to choose from) ───────────────────────────
+
 router.get("/shine/scavenger/missions", async (req, res): Promise<void> => {
   const missions = await db
     .select()
@@ -677,55 +720,7 @@ router.get("/shine/scavenger/missions", async (req, res): Promise<void> => {
   res.json(missions);
 });
 
-// Join a mission (queues the user for matching)
-router.post("/shine/scavenger/missions/:id/join", async (req, res): Promise<void> => {
-  const sessionToken = getSessionId(req);
-  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const user = await getShineUser(sessionToken);
-  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
-
-  const missionId = parseInt(req.params.id, 10);
-  if (isNaN(missionId)) { res.status(400).json({ error: "Invalid mission id" }); return; }
-
-  // Verify the mission exists and is active
-  const [mission] = await db
-    .select()
-    .from(shineMatchMissionsTable)
-    .where(and(eq(shineMatchMissionsTable.id, missionId), eq(shineMatchMissionsTable.isActive, true)));
-  if (!mission) { res.status(404).json({ error: "Mission not found" }); return; }
-
-  // Upsert participation (do nothing if already joined)
-  await db
-    .insert(shineMissionParticipantsTable)
-    .values({ userId: user.id, missionId })
-    .onConflictDoNothing();
-
-  res.json({ ok: true });
-});
-
-// Leave a mission
-router.delete("/shine/scavenger/missions/:id/join", async (req, res): Promise<void> => {
-  const sessionToken = getSessionId(req);
-  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
-  const user = await getShineUser(sessionToken);
-  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
-
-  const missionId = parseInt(req.params.id, 10);
-  if (isNaN(missionId)) { res.status(400).json({ error: "Invalid mission id" }); return; }
-
-  await db
-    .delete(shineMissionParticipantsTable)
-    .where(
-      and(
-        eq(shineMissionParticipantsTable.userId, user.id),
-        eq(shineMissionParticipantsTable.missionId, missionId)
-      )
-    );
-
-  res.json({ ok: true });
-});
-
-// ── My Groups ────────────────────────────────────────────────────────────────
+// ── My Groups ─────────────────────────────────────────────────────────────────
 
 router.get("/shine/scavenger/my-groups", async (req, res): Promise<void> => {
   const sessionToken = getSessionId(req);
@@ -733,7 +728,6 @@ router.get("/shine/scavenger/my-groups", async (req, res): Promise<void> => {
   const user = await getShineUser(sessionToken);
   if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
 
-  // Find all groups that include this user
   const allGroups = await db
     .select()
     .from(shineMatchGroupsTable)
@@ -746,15 +740,6 @@ router.get("/shine/scavenger/my-groups", async (req, res): Promise<void> => {
 
   if (myGroups.length === 0) { res.json([]); return; }
 
-  // Load mission info and member profiles
-  const missionIds = [...new Set(myGroups.map(g => g.missionId))];
-  const allMissionRows = await db
-    .select()
-    .from(shineMatchMissionsTable)
-    .where(inArray(shineMatchMissionsTable.id, missionIds));
-  const missionMap: Record<number, typeof shineMatchMissionsTable.$inferSelect> = {};
-  for (const m of allMissionRows) missionMap[m.id] = m;
-
   const allMemberIds = [...new Set(myGroups.flatMap(g => g.memberIds.split(",").map(Number)))];
   const allMembers = await db
     .select({ id: shineUsersTable.id, name: shineUsersTable.name, country: shineUsersTable.country, year: shineUsersTable.year })
@@ -763,26 +748,36 @@ router.get("/shine/scavenger/my-groups", async (req, res): Promise<void> => {
   const memberMap: Record<number, { id: number; name: string; country: string | null; year: string | null }> = {};
   for (const m of allMembers) memberMap[m.id] = m;
 
-  // Get the missions joined by this user to show participation status
-  const participated = await db
+  // Get latest message for each group (chat preview)
+  const groupIds = myGroups.map(g => g.id);
+  const allMessages = await db
     .select()
-    .from(shineMissionParticipantsTable)
-    .where(eq(shineMissionParticipantsTable.userId, user.id));
-  const joinedMissionIds = new Set(participated.map(p => p.missionId));
+    .from(shineMatchGroupMessagesTable)
+    .where(inArray(shineMatchGroupMessagesTable.groupId, groupIds))
+    .orderBy(desc(shineMatchGroupMessagesTable.createdAt));
+
+  const latestByGroup: Record<number, typeof shineMatchGroupMessagesTable.$inferSelect> = {};
+  for (const msg of allMessages) {
+    if (!latestByGroup[msg.groupId]) latestByGroup[msg.groupId] = msg;
+  }
 
   const result = myGroups.map(g => ({
     id: g.id,
-    missionId: g.missionId,
-    mission: missionMap[g.missionId] ?? null,
     members: g.memberIds.split(",").map(Number).map(id => memberMap[id] ?? { id, name: "Unknown" }),
     matchingSummary: g.matchingSummary,
+    chosenMissionId: g.chosenMissionId,
+    chosenMissionTitle: g.chosenMissionTitle,
+    status: g.status,
+    latestMessage: latestByGroup[g.id]
+      ? { content: latestByGroup[g.id].content, senderName: latestByGroup[g.id].senderName, messageType: latestByGroup[g.id].messageType }
+      : null,
     createdAt: g.createdAt.toISOString(),
   }));
 
   res.json(result);
 });
 
-// ── Check participation status ─────────────────────────────────────────────────
+// ── Check queue/match status ───────────────────────────────────────────────────
 
 router.get("/shine/scavenger/my-participation", async (req, res): Promise<void> => {
   const sessionToken = getSessionId(req);
@@ -790,22 +785,122 @@ router.get("/shine/scavenger/my-participation", async (req, res): Promise<void> 
   const user = await getShineUser(sessionToken);
   if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
 
-  const participated = await db
+  const [queueRow] = await db
     .select()
-    .from(shineMissionParticipantsTable)
-    .where(eq(shineMissionParticipantsTable.userId, user.id));
+    .from(shineMatchQueueTable)
+    .where(eq(shineMatchQueueTable.userId, user.id));
+
+  const totalQueue = await db.select().from(shineMatchQueueTable);
 
   res.json({
     isScavengerOptIn: user.isScavengerOptIn,
-    joinedMissionIds: participated.map(p => p.missionId),
+    inQueue: !!queueRow,
+    queueSize: totalQueue.length,
+    joinedAt: queueRow?.joinedAt?.toISOString() ?? null,
   });
 });
 
-// ── AI Matching ───────────────────────────────────────────────────────────────
-// POST /shine/scavenger/missions/:id/run-matching
-// Runs semantic grouping for all eligible participants who are not yet in a group.
-// Uses GPT to generate groups and per-group summaries.
-// Can be triggered by any authenticated user or an admin.
+// ── Group Chat ────────────────────────────────────────────────────────────────
+
+// Get all messages for a group
+router.get("/shine/scavenger/groups/:id/chat", async (req, res): Promise<void> => {
+  const sessionToken = getSessionId(req);
+  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const user = await getShineUser(sessionToken);
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const groupId = parseInt(req.params.id, 10);
+  if (isNaN(groupId)) { res.status(400).json({ error: "Invalid group id" }); return; }
+
+  // Verify membership
+  const [group] = await db.select().from(shineMatchGroupsTable).where(eq(shineMatchGroupsTable.id, groupId));
+  if (!group) { res.status(404).json({ error: "Group not found" }); return; }
+  const memberIds = group.memberIds.split(",").map(Number);
+  if (!memberIds.includes(user.id)) { res.status(403).json({ error: "Not a member of this group" }); return; }
+
+  const messages = await db
+    .select()
+    .from(shineMatchGroupMessagesTable)
+    .where(eq(shineMatchGroupMessagesTable.groupId, groupId))
+    .orderBy(shineMatchGroupMessagesTable.createdAt);
+
+  res.json(messages.map(m => ({
+    id: m.id,
+    userId: m.userId,
+    senderName: m.senderName,
+    content: m.content,
+    messageType: m.messageType,
+    isMe: m.userId === user.id,
+    createdAt: m.createdAt.toISOString(),
+  })));
+});
+
+// Send a message in a group chat
+router.post("/shine/scavenger/groups/:id/chat", async (req, res): Promise<void> => {
+  const sessionToken = getSessionId(req);
+  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const user = await getShineUser(sessionToken);
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const groupId = parseInt(req.params.id, 10);
+  if (isNaN(groupId)) { res.status(400).json({ error: "Invalid group id" }); return; }
+
+  const content = req.body?.content?.trim();
+  if (!content) { res.status(400).json({ error: "content is required" }); return; }
+
+  // Verify membership
+  const [group] = await db.select().from(shineMatchGroupsTable).where(eq(shineMatchGroupsTable.id, groupId));
+  if (!group) { res.status(404).json({ error: "Group not found" }); return; }
+  const memberIds = group.memberIds.split(",").map(Number);
+  if (!memberIds.includes(user.id)) { res.status(403).json({ error: "Not a member of this group" }); return; }
+
+  const [msg] = await db
+    .insert(shineMatchGroupMessagesTable)
+    .values({ groupId, userId: user.id, senderName: user.name, content, messageType: "user" })
+    .returning();
+
+  res.json({ ok: true, message: { id: msg.id, senderName: msg.senderName, content: msg.content, messageType: msg.messageType, isMe: true, createdAt: msg.createdAt.toISOString() } });
+});
+
+// ── Choose Mission (group decision) ──────────────────────────────────────────
+
+router.post("/shine/scavenger/groups/:id/choose-mission", async (req, res): Promise<void> => {
+  const sessionToken = getSessionId(req);
+  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const user = await getShineUser(sessionToken);
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const groupId = parseInt(req.params.id, 10);
+  if (isNaN(groupId)) { res.status(400).json({ error: "Invalid group id" }); return; }
+
+  const { missionId, missionTitle } = req.body ?? {};
+  if (!missionId || !missionTitle) { res.status(400).json({ error: "missionId and missionTitle are required" }); return; }
+
+  // Verify membership
+  const [group] = await db.select().from(shineMatchGroupsTable).where(eq(shineMatchGroupsTable.id, groupId));
+  if (!group) { res.status(404).json({ error: "Group not found" }); return; }
+  const memberIds = group.memberIds.split(",").map(Number);
+  if (!memberIds.includes(user.id)) { res.status(403).json({ error: "Not a member of this group" }); return; }
+
+  // Update the group
+  await db
+    .update(shineMatchGroupsTable)
+    .set({ chosenMissionId: String(missionId), chosenMissionTitle: missionTitle, status: "mission_chosen" })
+    .where(eq(shineMatchGroupsTable.id, groupId));
+
+  // Post a system message in the chat
+  await db.insert(shineMatchGroupMessagesTable).values({
+    groupId,
+    userId: null,
+    senderName: "SHINE",
+    content: `🗺️ Your group has chosen: **${missionTitle}**! Get together and complete the mission. You'll earn bonus points as a matched group. Good luck!`,
+    messageType: "system",
+  });
+
+  res.json({ ok: true, chosenMissionId: String(missionId), chosenMissionTitle: missionTitle });
+});
+
+// ── AI Matching (global queue) ────────────────────────────────────────────────
 
 async function callOpenAI(prompt: string): Promise<string> {
   const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ?? "https://api.openai.com/v1";
@@ -826,7 +921,6 @@ async function callOpenAI(prompt: string): Promise<string> {
   return data?.choices?.[0]?.message?.content ?? "";
 }
 
-// Simple Jaccard similarity on word tokens for fallback when AI is unavailable
 function tokenize(text: string): Set<string> {
   const stopwords = new Set(["the","a","an","is","are","was","were","be","been","being","have","has","had","do","does","did","will","would","could","should","may","might","shall","can","to","of","in","on","at","by","for","with","about","as","i","me","my","we","our","you","your","it","its","they","their","and","or","but","not","so","if","when","than","that","this","these","those","then","just","from","up","out","what","who","which","how","all","each","one","two","three"]);
   return new Set(
@@ -841,103 +935,69 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return intersection.size / union.size;
 }
 
-// Greedy group formation: sort by mutual similarity, form groups of minSize
-function formGroups(
-  users: Array<{ id: number; text: string }>,
-  minSize: number,
-  maxSize?: number | null
-): number[][] {
+function formGroups(users: Array<{ id: number; text: string }>, minSize: number, maxSize: number): number[][] {
   const tokens = users.map(u => ({ id: u.id, tok: tokenize(u.text) }));
   const assigned = new Set<number>();
   const groups: number[][] = [];
-  const cap = maxSize ?? minSize * 2;
 
   for (const seed of tokens) {
     if (assigned.has(seed.id)) continue;
     const group = [seed.id];
     assigned.add(seed.id);
 
-    // Pick the most similar unassigned users
     const scored = tokens
       .filter(t => !assigned.has(t.id))
       .map(t => ({ id: t.id, score: jaccard(seed.tok, t.tok) }))
       .sort((a, b) => b.score - a.score);
 
     for (const candidate of scored) {
-      if (group.length >= cap) break;
+      if (group.length >= maxSize) break;
       group.push(candidate.id);
       assigned.add(candidate.id);
     }
 
-    if (group.length >= minSize) {
-      groups.push(group);
-    } else {
-      // Not enough for a full group — add leftovers into last group if it fits
-      if (groups.length > 0 && groups[groups.length - 1].length + group.length <= cap) {
-        groups[groups.length - 1].push(...group);
-      } else {
-        // Hold them — keep them unassigned so they'll be grouped next time more join
-        for (const id of group) assigned.delete(id);
-      }
-    }
+    if (group.length >= minSize) groups.push(group);
+    else { for (const id of group) assigned.delete(id); }
   }
 
   return groups;
 }
 
-router.post("/shine/scavenger/missions/:id/run-matching", async (req, res): Promise<void> => {
+// POST /shine/scavenger/run-matching
+// Matches all queued users by shared interests, creates groups, seeds group chats.
+router.post("/shine/scavenger/run-matching", async (req, res): Promise<void> => {
   const sessionToken = getSessionId(req);
   if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
   const user = await getShineUser(sessionToken);
   if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
 
-  const missionId = parseInt(req.params.id, 10);
-  if (isNaN(missionId)) { res.status(400).json({ error: "Invalid mission id" }); return; }
-
-  const [mission] = await db
-    .select()
-    .from(shineMatchMissionsTable)
-    .where(eq(shineMatchMissionsTable.id, missionId));
-  if (!mission) { res.status(404).json({ error: "Mission not found" }); return; }
-
-  // Find all participants who opted in and aren't already grouped
-  const participants = await db
-    .select({ userId: shineMissionParticipantsTable.userId })
-    .from(shineMissionParticipantsTable)
-    .where(eq(shineMissionParticipantsTable.missionId, missionId));
-
-  const participantIds = participants.map(p => p.userId);
-  if (participantIds.length === 0) {
-    res.json({ message: "No participants yet", groupsCreated: 0 }); return;
+  // Get everyone in the queue
+  const queue = await db.select().from(shineMatchQueueTable).orderBy(shineMatchQueueTable.joinedAt);
+  if (queue.length === 0) {
+    res.json({ message: "Queue is empty", groupsCreated: 0 }); return;
   }
 
-  // Find who's already in a group for this mission
-  const existingGroups = await db
-    .select()
-    .from(shineMatchGroupsTable)
-    .where(eq(shineMatchGroupsTable.missionId, missionId));
+  // Find who's already been matched (in any active group)
+  const existingGroups = await db.select().from(shineMatchGroupsTable);
+  const alreadyGrouped = new Set(existingGroups.flatMap(g => g.memberIds.split(",").map(Number)));
 
-  const alreadyGrouped = new Set(
-    existingGroups.flatMap(g => g.memberIds.split(",").map(Number))
-  );
+  const eligibleIds = queue.map(q => q.userId).filter(id => !alreadyGrouped.has(id));
 
-  const eligibleIds = participantIds.filter(id => !alreadyGrouped.has(id));
+  const MIN_GROUP = 4;
+  const MAX_GROUP = 8;
 
-  if (eligibleIds.length < mission.minGroupSize) {
+  if (eligibleIds.length < MIN_GROUP) {
     res.json({
-      message: `Need at least ${mission.minGroupSize} ungrouped participants. Currently ${eligibleIds.length}.`,
+      message: `Need at least ${MIN_GROUP} unmatched users in queue. Currently ${eligibleIds.length}.`,
       groupsCreated: 0,
+      queueSize: queue.length,
     });
     return;
   }
 
-  // Collect text for each eligible user: hidden journal + their recent posts
-  const eligibleUsers = await db
-    .select()
-    .from(shineUsersTable)
-    .where(inArray(shineUsersTable.id, eligibleIds));
+  // Fetch user profiles + posts for text-based matching
+  const eligibleUsers = await db.select().from(shineUsersTable).where(inArray(shineUsersTable.id, eligibleIds));
 
-  // Also grab their sunlight posts
   const userPosts = await db
     .select()
     .from(shineSunlightPostsTable)
@@ -952,26 +1012,24 @@ router.post("/shine/scavenger/missions/:id/run-matching", async (req, res): Prom
     }
   }
 
-  // Build per-user text blobs
   const userData = eligibleUsers.map(u => ({
     id: u.id,
     name: u.name,
     text: [
+      u.interests?.join(", ") ?? "",
       u.hiddenJournal ?? "",
       ...(postsByUser[u.id] ?? []),
     ].join("\n").trim(),
   }));
 
-  // Form groups using similarity
-  const groups = formGroups(userData, mission.minGroupSize, mission.maxGroupSize);
+  const groups = formGroups(userData, MIN_GROUP, MAX_GROUP);
 
   if (groups.length === 0) {
-    res.json({ message: "Not enough eligible participants to form groups", groupsCreated: 0 });
+    res.json({ message: "Not enough users to form complete groups yet", groupsCreated: 0, queueSize: queue.length });
     return;
   }
 
-  // For each group, generate a matching summary via AI, then persist
-  const createdGroups: Array<{ id: number; memberIds: number[]; summary: string }> = [];
+  const createdGroups: Array<{ id: number; memberCount: number; summary: string }> = [];
 
   for (const memberIds of groups) {
     const members = userData.filter(u => memberIds.includes(u.id));
@@ -979,40 +1037,44 @@ router.post("/shine/scavenger/missions/:id/run-matching", async (req, res): Prom
 
     try {
       const membersText = members
-        .map((m, i) => `Student ${i + 1}: ${m.text.slice(0, 300) || "No information provided"}`)
+        .map((m, i) => `Student ${i + 1}: ${m.text.slice(0, 300) || "No profile info yet"}`)
         .join("\n\n");
 
-      const prompt = `You are a Harvard International Students program coordinator. The following students were matched together for a scavenger hunt mission called "${mission.title}".
+      const prompt = `You are a Harvard International Students program coordinator. These students were just AI-matched into a group based on shared interests and goals.
 
 ${membersText}
 
-Write 1-2 friendly sentences (max 60 words) explaining why this group was matched together. Focus on shared interests, needs, or goals you notice in their writing. Start directly with "You were matched because..." and do NOT mention any names or identifying information.`;
+Write 1-2 friendly sentences (max 60 words) explaining why this group was matched. Focus on shared themes in their writing. Start with "You were matched because..." and do NOT mention names or identifying info.`;
 
       summary = (await callOpenAI(prompt)).trim() || summary;
-    } catch (e) {
-      // AI summary generation failed — use default
-    }
+    } catch (_) { /* use default */ }
 
+    // Create the group
     const [created] = await db
       .insert(shineMatchGroupsTable)
-      .values({
-        missionId,
-        memberIds: memberIds.join(","),
-        matchingSummary: summary,
-      })
+      .values({ memberIds: memberIds.join(","), matchingSummary: summary, status: "active" })
       .returning();
 
-    createdGroups.push({ id: created.id, memberIds, summary });
+    // Seed the group chat with a welcome system message
+    const memberNames = members.map(m => m.name.split(" ")[0]).join(", ");
+    await db.insert(shineMatchGroupMessagesTable).values({
+      groupId: created.id,
+      userId: null,
+      senderName: "SHINE",
+      content: `🎉 You've been matched! Meet your group: ${memberNames}. ${summary} Browse the missions below and pick one to explore together — you'll earn bonus points as a matched group!`,
+      messageType: "system",
+    });
+
+    // Remove matched users from the queue
+    await db.delete(shineMatchQueueTable).where(inArray(shineMatchQueueTable.userId, memberIds));
+
+    createdGroups.push({ id: created.id, memberCount: memberIds.length, summary });
   }
 
   res.json({
-    message: `Successfully created ${createdGroups.length} group(s)`,
+    message: `Matched ${createdGroups.length} group(s)! Group chats have been created.`,
     groupsCreated: createdGroups.length,
-    groups: createdGroups.map(g => ({
-      id: g.id,
-      memberCount: g.memberIds.length,
-      summary: g.summary,
-    })),
+    groups: createdGroups,
   });
 });
 
