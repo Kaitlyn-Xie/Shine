@@ -75,4 +75,6 @@ export const api = {
   getScavengerMissions: () => request("GET", "/scavenger/missions"),
   // Group mission completion
   completeGroupMission: (groupId, data) => request("POST", `/scavenger/groups/${groupId}/complete-mission`, data),
+  // Leaderboard
+  getLeaderboard: () => request("GET", "/hunt/leaderboard"),
 };

@@ -424,11 +424,27 @@ function BadgesSection({ earnedIds }) {
 // ── Leaderboard Tab ───────────────────────────────────────────────────────────
 function LeaderboardTab({ huntData, user }) {
   const [mode, setMode] = useState('individual')
+  const [apiBoard, setApiBoard] = useState(null)
+  const [boardLoading, setBoardLoading] = useState(true)
   const totalPts = huntData.completions.reduce((s, c) => s + (c.pts?.total ?? 0), 0)
   const badgePts = huntData.badges.reduce((s, id) => { const b = BADGES.find(b => b.id === id); return s + (b?.points ?? 0) }, 0)
   const myTotal = totalPts + badgePts
-  const myEntry = { name: user?.name || 'You', country: '🌟', dorm: user?.dorm || 'Your Dorm', points: myTotal, completed: huntData.completions.length, isMe: true }
-  const allIndividual = [...MOCK_LEADERBOARD, myEntry].sort((a, b) => b.points - a.points)
+
+  useEffect(() => {
+    api.getLeaderboard()
+      .then(data => { setApiBoard(data); setBoardLoading(false) })
+      .catch(() => setBoardLoading(false))
+  }, [])
+
+  // Build individual list from API data; highlight current user by userId
+  const allIndividual = apiBoard
+    ? apiBoard.map(entry => ({
+        ...entry,
+        points: entry.pts,
+        completed: entry.missions,
+        isMe: user && entry.userId === user.id,
+      }))
+    : []
   const myRank = allIndividual.findIndex(e => e.isMe) + 1
   return (
     <div style={{ paddingBottom: 20 }}>
@@ -452,18 +468,26 @@ function LeaderboardTab({ huntData, user }) {
         </div>
       )}
       <div style={{ padding: '0 16px' }}>
-        {mode === 'individual' ? allIndividual.map((entry, i) => (
-          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, marginBottom: 8, background: entry.isMe ? HUNT_LIGHT : '#fff', border: entry.isMe ? `1.5px solid ${HUNT_PRIMARY}44` : '1.5px solid var(--border)' }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: i < 3 ? '#1A1A1A' : '#6B7280' }}>
-              {i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}
+        {mode === 'individual' ? (
+          boardLoading ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#9CA3AF', fontSize: 14 }}>Loading leaderboard…</div>
+          ) : allIndividual.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#9CA3AF', fontSize: 14 }}>No users yet</div>
+          ) : allIndividual.map((entry, i) => (
+            <div key={entry.userId ?? i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, marginBottom: 8, background: entry.isMe ? HUNT_LIGHT : '#fff', border: entry.isMe ? `1.5px solid ${HUNT_PRIMARY}44` : '1.5px solid var(--border)' }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13, color: i < 3 ? '#1A1A1A' : '#6B7280' }}>
+                {i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: entry.isMe ? HUNT_PRIMARY : '#1A1A1A' }}>{entry.name}{entry.isMe ? ' (You)' : ''}</div>
+                <div style={{ fontSize: 12, color: '#6B7280' }}>
+                  {[entry.country, entry.dorm, `${entry.completed} mission${entry.completed !== 1 ? 's' : ''}`].filter(Boolean).join(' · ')}
+                </div>
+              </div>
+              <div style={{ fontWeight: 900, fontSize: 17, color: entry.isMe ? HUNT_PRIMARY : '#1A1A1A' }}>{entry.points}</div>
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 14, color: entry.isMe ? HUNT_PRIMARY : '#1A1A1A' }}>{entry.name}{entry.isMe ? ' (You)' : ''}</div>
-              <div style={{ fontSize: 12, color: '#6B7280' }}>{entry.country} · {entry.completed} missions</div>
-            </div>
-            <div style={{ fontWeight: 900, fontSize: 17, color: entry.isMe ? HUNT_PRIMARY : '#1A1A1A' }}>{entry.points}</div>
-          </div>
-        )) : MOCK_GROUP_LEADERBOARD.map((group, i) => (
+          ))
+        ) : MOCK_GROUP_LEADERBOARD.map((group, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, marginBottom: 8, background: '#fff', border: '1.5px solid var(--border)' }}>
             <div style={{ width: 28, height: 28, borderRadius: '50%', flexShrink: 0, background: i === 0 ? '#FFD700' : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 13 }}>
               {i < 3 ? ['🥇', '🥈', '🥉'][i] : i + 1}

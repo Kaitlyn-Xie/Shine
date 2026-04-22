@@ -567,48 +567,36 @@ router.post("/shine/hunt/complete", async (req, res): Promise<void> => {
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 
 router.get("/shine/hunt/leaderboard", async (req, res): Promise<void> => {
-  const completions = await db
-    .select()
-    .from(shineHuntCompletionsTable)
-    .orderBy(desc(shineHuntCompletionsTable.createdAt));
+  // Fetch all registered users and all completions in parallel
+  const [allUsers, completions] = await Promise.all([
+    db.select({ id: shineUsersTable.id, name: shineUsersTable.name, dorm: shineUsersTable.dorm, country: shineUsersTable.country })
+      .from(shineUsersTable),
+    db.select().from(shineHuntCompletionsTable),
+  ]);
 
-  const userMap: Record<number, { name: string; pts: number; missions: number }> = {};
-  for (const c of completions) {
-    if (!userMap[c.userId]) {
-      userMap[c.userId] = { name: "", pts: 0, missions: 0 };
-    }
-    userMap[c.userId].pts += c.ptsTotal;
-    userMap[c.userId].missions += 1;
-  }
-
-  const userIds = Object.keys(userMap).map(Number);
-  if (userIds.length === 0) {
-    res.json([]);
-    return;
-  }
-
-  const users = await db
-    .select({ id: shineUsersTable.id, name: shineUsersTable.name })
-    .from(shineUsersTable)
-    .where(eq(shineUsersTable.id, userIds[0]));
-
-  const allUsers = await db
-    .select({ id: shineUsersTable.id, name: shineUsersTable.name })
-    .from(shineUsersTable);
-
+  // Sum points and mission count per user (default 0 for users with no completions)
+  const userMap: Record<number, { pts: number; missions: number }> = {};
   for (const u of allUsers) {
-    if (userMap[u.id]) userMap[u.id].name = u.name;
+    userMap[u.id] = { pts: 0, missions: 0 };
+  }
+  for (const c of completions) {
+    if (userMap[c.userId]) {
+      userMap[c.userId].pts += c.ptsTotal;
+      userMap[c.userId].missions += 1;
+    }
   }
 
-  const leaderboard = Object.entries(userMap)
-    .map(([id, data]) => ({
-      userId: Number(id),
-      name: data.name || "Anonymous",
-      pts: data.pts,
-      missions: data.missions,
+  const leaderboard = allUsers
+    .map(u => ({
+      userId: u.id,
+      name: u.name || "Anonymous",
+      dorm: u.dorm ?? null,
+      country: u.country ?? null,
+      pts: userMap[u.id]?.pts ?? 0,
+      missions: userMap[u.id]?.missions ?? 0,
     }))
-    .sort((a, b) => b.pts - a.pts)
-    .slice(0, 20);
+    .sort((a, b) => b.pts - a.pts || a.name.localeCompare(b.name))
+    .slice(0, 50);
 
   res.json(leaderboard);
 });
