@@ -904,6 +904,101 @@ router.post("/shine/scavenger/groups/:id/choose-mission", async (req, res): Prom
   res.json({ ok: true, chosenMissionId: String(missionId), chosenMissionTitle: missionTitle });
 });
 
+// ── Group Mission Completion ──────────────────────────────────────────────────
+
+// POST /scavenger/groups/:id/complete-mission
+// Records completion for ALL group members, optionally posts to the community feed,
+// and seeds a celebration system message in the group chat.
+router.post("/shine/scavenger/groups/:id/complete-mission", async (req, res): Promise<void> => {
+  const sessionToken = getSessionId(req);
+  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const user = await getShineUser(sessionToken);
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const groupId = parseInt(req.params.id, 10);
+  if (isNaN(groupId)) { res.status(400).json({ error: "Invalid group id" }); return; }
+
+  const { photoUrl, caption, shareToFeed, ptsTotal } = req.body ?? {};
+  if (!photoUrl) { res.status(400).json({ error: "photoUrl is required" }); return; }
+
+  // Verify membership + mission chosen
+  const [group] = await db.select().from(shineMatchGroupsTable).where(eq(shineMatchGroupsTable.id, groupId));
+  if (!group) { res.status(404).json({ error: "Group not found" }); return; }
+  const memberIds = group.memberIds.split(",").map(Number);
+  if (!memberIds.includes(user.id)) { res.status(403).json({ error: "Not a member of this group" }); return; }
+  if (!group.chosenMissionId || !group.chosenMissionTitle) {
+    res.status(400).json({ error: "Group has not chosen a mission yet" }); return;
+  }
+
+  const missionId = group.chosenMissionId;
+  const missionTitle = group.chosenMissionTitle;
+  const totalPts = ptsTotal ?? 0;
+
+  // Award completion to every group member (skip if already completed this mission)
+  const completedMembers: number[] = [];
+  for (const memberId of memberIds) {
+    const existing = await db
+      .select()
+      .from(shineHuntCompletionsTable)
+      .where(and(eq(shineHuntCompletionsTable.userId, memberId), eq(shineHuntCompletionsTable.missionId, missionId)));
+    if (existing.length === 0) {
+      await db.insert(shineHuntCompletionsTable).values({
+        userId: memberId,
+        missionId,
+        missionTitle,
+        ptsTotal: totalPts,
+        photoUrl: photoUrl ?? null,
+        shareToFeed: !!(shareToFeed && memberId === user.id),
+      });
+      completedMembers.push(memberId);
+    }
+  }
+
+  // Create a single community feed post (from the submitter)
+  if (shareToFeed && photoUrl) {
+    const postText = caption?.trim()
+      ? `${caption.trim()}\n\n🤖 AI Match group completed: ${missionTitle}!`
+      : `🤖 AI Match group completed: ${missionTitle}! Our matched group of ${memberIds.length} explored Harvard together. ✨`;
+    await db.insert(shineFeedPostsTable).values({
+      userId: user.id,
+      username: user.name,
+      text: postText,
+      img: photoUrl,
+      mediaType: "photo",
+      isHunt: true,
+    });
+  }
+
+  // Mark group as completed
+  await db.update(shineMatchGroupsTable)
+    .set({ status: "completed" })
+    .where(eq(shineMatchGroupsTable.id, groupId));
+
+  // Post celebration system message in group chat
+  const memberNames = (await db
+    .select({ name: shineUsersTable.name })
+    .from(shineUsersTable)
+    .where(inArray(shineUsersTable.id, memberIds))
+  ).map(u => u.name.split(" ")[0]).join(", ");
+
+  await db.insert(shineMatchGroupMessagesTable).values({
+    groupId,
+    userId: null,
+    senderName: "SHINE",
+    content: `🎉 Mission complete! **${missionTitle}** has been verified for ${memberNames}. Each member earned **${totalPts} points** — including the AI Match bonus. ${shareToFeed ? "Your group photo has been posted to the community feed!" : ""} Amazing teamwork! 🌟`,
+    messageType: "system",
+  });
+
+  res.status(201).json({
+    ok: true,
+    missionId,
+    missionTitle,
+    ptsTotal: totalPts,
+    completedMembers,
+    postedToFeed: !!(shareToFeed && photoUrl),
+  });
+});
+
 // ── AI Matching (global queue) ────────────────────────────────────────────────
 
 async function callOpenAI(prompt: string): Promise<string> {

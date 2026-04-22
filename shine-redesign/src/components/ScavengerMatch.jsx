@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from '../lib/api'
 import { CloseIcon, CheckIcon } from './Icons'
-import { MISSIONS } from '../data/missions'
+import { MISSIONS, computePoints, MATCH_GROUP_BONUS } from '../data/missions'
 
 const PRIMARY = '#1B8757'
 const GRADIENT = 'linear-gradient(135deg, #2ECC87, #1B8757)'
@@ -111,12 +111,175 @@ function MissionChooserSheet({ groupId, onChosen, onClose }) {
   )
 }
 
+// ── Group Mission Completion Sheet ────────────────────────────────────────────
+function GroupMissionCompletionSheet({ group, onClose, onComplete }) {
+  const mission = MISSIONS.find(m => String(m.id) === String(group.chosenMissionId))
+  const difficulty = mission?.difficulty ?? 'medium'
+  const [photoUrl, setPhotoUrl] = useState(null)
+  const [caption, setCaption] = useState('')
+  const [shareToFeed, setShareToFeed] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [result, setResult] = useState(null)
+  const fileRef = useRef(null)
+
+  const pts = computePoints(
+    { difficulty },
+    { groupSize: group.members.length, hasDiversity: false, shareToFeed, isTimeLimited: false, isMatchGroup: true }
+  )
+
+  function handlePhoto(e) {
+    const file = e.target.files?.[0]; if (!file) return
+    const reader = new FileReader()
+    reader.onload = ev => setPhotoUrl(ev.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  async function handleSubmit() {
+    if (!photoUrl || submitting) return
+    setSubmitting(true)
+    try {
+      await api.completeGroupMission(group.id, { photoUrl, caption, shareToFeed, ptsTotal: pts.total })
+      setResult({ pts, shared: shareToFeed })
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 2200, background: 'rgba(0,0,0,0.65)', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+      <div className="slide-up" style={{ background: '#fff', borderRadius: '22px 22px 0 0', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+
+        {result ? (
+          /* ── Success state ── */
+          <div style={{ padding: '36px 24px 48px', textAlign: 'center' }}>
+            <div style={{ fontSize: 64, marginBottom: 12 }}>🎉</div>
+            <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 6 }}>Mission Complete!</div>
+            <div style={{ fontSize: 14, color: '#6B7280', marginBottom: 24 }}>{group.chosenMissionTitle}</div>
+            <div style={{ background: LIGHT, borderRadius: 20, padding: '20px 24px', marginBottom: 20 }}>
+              <div style={{ fontSize: 48, fontWeight: 900, color: PRIMARY }}>{result.pts.total}</div>
+              <div style={{ fontSize: 13, color: '#6B7280', marginTop: 2 }}>points earned — for every group member</div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 10, background: '#F0F0F0', color: '#1A1A1A' }}>Base: +{result.pts.base}</span>
+                {result.pts.bonus > 0 && <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 10, background: LIGHT, color: PRIMARY }}>Bonuses: +{result.pts.bonus}</span>}
+                <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 10, background: '#EDE9FE', color: PURPLE }}>🤖 AI Match: +{MATCH_GROUP_BONUS}</span>
+              </div>
+            </div>
+            {result.shared && (
+              <div style={{ background: '#F0FDF4', borderRadius: 14, padding: '10px 16px', marginBottom: 20, fontSize: 13, color: PRIMARY, fontWeight: 600 }}>
+                📸 Your group photo was posted to the community feed!
+              </div>
+            )}
+            <button onClick={() => onComplete(result)} style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', background: GRADIENT, color: '#fff', fontSize: 16, fontWeight: 800, cursor: 'pointer', boxShadow: '0 4px 16px rgba(27,135,87,0.35)' }}>
+              Amazing! Keep exploring 🌟
+            </button>
+          </div>
+        ) : (
+          /* ── Form state ── */
+          <>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px', flexShrink: 0 }}>
+              <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 20px 14px', flexShrink: 0, borderBottom: '1px solid var(--border)' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                  <div style={{ fontSize: 18, fontWeight: 900 }}>Complete Mission</div>
+                  <span style={{ fontSize: 10, fontWeight: 800, background: '#EDE9FE', color: PURPLE, padding: '3px 8px', borderRadius: 8 }}>🤖 AI Match</span>
+                </div>
+                <div style={{ fontSize: 13, color: '#6B7280' }}>{group.chosenMissionTitle}</div>
+              </div>
+              <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                <CloseIcon size={20} color="#9A9A9A" />
+              </button>
+            </div>
+
+            <div style={{ overflowY: 'auto', flex: 1, padding: '16px 20px 32px' }}>
+
+              {/* Points Preview */}
+              <div style={{ background: LIGHT, borderRadius: 16, padding: '14px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 800, color: PRIMARY, marginBottom: 2 }}>POINTS EACH MEMBER EARNS</div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#fff', color: '#6B7280' }}>Base +{pts.base}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#EDE9FE', color: PURPLE }}>🤖 Match +{MATCH_GROUP_BONUS}</span>
+                    {shareToFeed && <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 8, background: '#FEF3C7', color: '#B45309' }}>📸 Share +2</span>}
+                  </div>
+                </div>
+                <div style={{ fontSize: 32, fontWeight: 900, color: PRIMARY }}>{pts.total}</div>
+              </div>
+
+              {/* Group Photo Upload */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>Group photo proof <span style={{ color: '#EF4444' }}>*</span></div>
+                <input ref={fileRef} type="file" accept="image/*" capture="environment" onChange={handlePhoto} style={{ display: 'none' }} />
+                {photoUrl ? (
+                  <div style={{ position: 'relative' }}>
+                    <img src={photoUrl} alt="Group photo" style={{ width: '100%', borderRadius: 16, maxHeight: 220, objectFit: 'cover' }} />
+                    <button onClick={() => { setPhotoUrl(null); fileRef.current.value = '' }} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(0,0,0,0.5)', border: 'none', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CloseIcon size={14} color="#fff" />
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => fileRef.current.click()} style={{ width: '100%', padding: '28px 0', borderRadius: 16, border: '2px dashed #D1D5DB', background: '#F9FAFB', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 36 }}>📸</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#6B7280' }}>Take or upload your group photo</div>
+                    <div style={{ fontSize: 12, color: '#9CA3AF' }}>Proof of mission completion</div>
+                  </button>
+                )}
+              </div>
+
+              {/* Caption */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>Caption <span style={{ fontWeight: 500, color: '#9CA3AF' }}>(optional)</span></div>
+                <textarea
+                  value={caption}
+                  onChange={e => setCaption(e.target.value)}
+                  placeholder="Share a moment from your mission…"
+                  rows={2}
+                  style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: '1.5px solid var(--border)', fontSize: 14, fontFamily: 'inherit', resize: 'none', outline: 'none', boxSizing: 'border-box', lineHeight: 1.5 }}
+                />
+              </div>
+
+              {/* Share to feed toggle */}
+              <div
+                onClick={() => setShareToFeed(v => !v)}
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 14, background: shareToFeed ? LIGHT : '#F9FAFB', border: `1.5px solid ${shareToFeed ? PRIMARY + '55' : '#E5E7EB'}`, cursor: 'pointer', marginBottom: 20, transition: 'all 0.15s' }}
+              >
+                <div style={{ width: 24, height: 24, borderRadius: 8, flexShrink: 0, background: shareToFeed ? PRIMARY : '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}>
+                  {shareToFeed && <CheckIcon size={13} color="#fff" />}
+                </div>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700 }}>Post to community feed</div>
+                  <div style={{ fontSize: 12, color: '#6B7280' }}>Share your group photo with the SHINE community · +2 pts</div>
+                </div>
+              </div>
+
+              {/* Submit */}
+              <button
+                onClick={handleSubmit}
+                disabled={!photoUrl || submitting}
+                style={{ width: '100%', padding: 14, borderRadius: 14, border: 'none', background: photoUrl ? GRADIENT : '#E5E7EB', color: photoUrl ? '#fff' : '#AAAAAA', fontWeight: 800, fontSize: 15, cursor: photoUrl ? 'pointer' : 'default', boxShadow: photoUrl ? '0 4px 16px rgba(27,135,87,0.3)' : 'none', transition: 'all 0.2s' }}
+              >
+                {submitting ? '⏳ Submitting…' : `🎯 Submit & Claim ${pts.total} Points`}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>,
+    document.body
+  )
+}
+
 // ── Group Chat View ────────────────────────────────────────────────────────────
-function GroupChat({ group, currentUser, onBack, onMissionChosen }) {
+function GroupChat({ group: initialGroup, currentUser, onBack, onMissionChosen }) {
+  const [group, setGroup] = useState(initialGroup)
   const [messages, setMessages] = useState([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
   const [showMissions, setShowMissions] = useState(false)
+  const [showCompletion, setShowCompletion] = useState(false)
   const [loadingChat, setLoadingChat] = useState(true)
   const bottomRef = useRef(null)
   const pollRef = useRef(null)
@@ -160,12 +323,19 @@ function GroupChat({ group, currentUser, onBack, onMissionChosen }) {
 
   function handleMissionChosen(chosen) {
     setShowMissions(false)
+    setGroup(prev => ({ ...prev, chosenMissionId: chosen.missionId, chosenMissionTitle: chosen.missionTitle, status: 'mission_chosen' }))
     onMissionChosen(chosen)
-    // The run-matching system message will appear on next poll
+  }
+
+  function handleCompletionDone(result) {
+    setShowCompletion(false)
+    setGroup(prev => ({ ...prev, status: 'completed' }))
+    loadChat()
   }
 
   const memberNames = group.members.map(m => m.name.split(' ')[0]).join(', ')
   const hasMission = !!group.chosenMissionId
+  const isCompleted = group.status === 'completed'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#F9FAFB' }}>
@@ -217,15 +387,28 @@ function GroupChat({ group, currentUser, onBack, onMissionChosen }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Choose Mission CTA (if no mission yet) */}
+      {/* Bottom CTA */}
       {!hasMission && (
         <div style={{ background: '#fff', borderTop: '1px solid var(--border)', padding: '12px 16px', flexShrink: 0 }}>
-          <button
-            onClick={() => setShowMissions(true)}
-            style={{ width: '100%', padding: '12px', borderRadius: 14, border: 'none', background: GRADIENT, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 14px rgba(27,135,87,0.3)' }}
-          >
+          <button onClick={() => setShowMissions(true)} style={{ width: '100%', padding: '12px', borderRadius: 14, border: 'none', background: GRADIENT, color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 14px rgba(27,135,87,0.3)' }}>
             🗺️ Choose Your Group Mission
           </button>
+        </div>
+      )}
+      {hasMission && !isCompleted && (
+        <div style={{ background: '#fff', borderTop: '1px solid var(--border)', padding: '12px 16px', flexShrink: 0 }}>
+          <button
+            onClick={() => setShowCompletion(true)}
+            style={{ width: '100%', padding: '13px', borderRadius: 14, border: 'none', background: 'linear-gradient(135deg, #7C3AED, #5B21B6)', color: '#fff', fontWeight: 800, fontSize: 14, cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,58,237,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+          >
+            <span>🎯</span>
+            <span>Complete Mission — Earn {computePoints({ difficulty: MISSIONS.find(m => String(m.id) === String(group.chosenMissionId))?.difficulty ?? 'medium' }, { groupSize: group.members.length, isMatchGroup: true, shareToFeed: true }).total} pts each</span>
+          </button>
+        </div>
+      )}
+      {isCompleted && (
+        <div style={{ background: '#F0FDF4', borderTop: `1px solid ${PRIMARY}33`, padding: '12px 16px', flexShrink: 0, textAlign: 'center' }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: PRIMARY }}>✅ Mission completed! Check your profile for points.</div>
         </div>
       )}
 
@@ -248,6 +431,9 @@ function GroupChat({ group, currentUser, onBack, onMissionChosen }) {
 
       {showMissions && (
         <MissionChooserSheet groupId={group.id} onChosen={handleMissionChosen} onClose={() => setShowMissions(false)} />
+      )}
+      {showCompletion && (
+        <GroupMissionCompletionSheet group={group} onClose={() => setShowCompletion(false)} onComplete={handleCompletionDone} />
       )}
     </div>
   )

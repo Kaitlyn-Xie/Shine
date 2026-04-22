@@ -73,4 +73,6 @@ export const api = {
   chooseGroupMission: (groupId, missionId, missionTitle) => request("POST", `/scavenger/groups/${groupId}/choose-mission`, { missionId, missionTitle }),
   // Available missions (for group to pick from)
   getScavengerMissions: () => request("GET", "/scavenger/missions"),
+  // Group mission completion
+  completeGroupMission: (groupId, data) => request("POST", `/scavenger/groups/${groupId}/complete-mission`, data),
 };
