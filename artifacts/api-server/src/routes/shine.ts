@@ -935,25 +935,32 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return intersection.size / union.size;
 }
 
-function formGroups(users: Array<{ id: number; text: string }>, minSize: number, maxSize: number): number[][] {
-  const tokens = users.map(u => ({ id: u.id, tok: tokenize(u.text) }));
+function formGroups(users: Array<{ id: number; text: string; country?: string | null }>, minSize: number, maxSize: number): number[][] {
+  const tokens = users.map(u => ({ id: u.id, tok: tokenize(u.text), country: u.country ?? null }));
   const assigned = new Set<number>();
   const groups: number[][] = [];
 
   for (const seed of tokens) {
     if (assigned.has(seed.id)) continue;
     const group = [seed.id];
+    const groupCountries = new Set<string>(seed.country ? [seed.country] : []);
     assigned.add(seed.id);
 
     const scored = tokens
       .filter(t => !assigned.has(t.id))
-      .map(t => ({ id: t.id, score: jaccard(seed.tok, t.tok) }))
+      .map(t => {
+        const similarity = jaccard(seed.tok, t.tok);
+        // Diversity bonus: reward candidates from a country not yet in the group
+        const diversityBonus = (t.country && !groupCountries.has(t.country)) ? 0.15 : 0;
+        return { id: t.id, country: t.country, score: similarity + diversityBonus };
+      })
       .sort((a, b) => b.score - a.score);
 
     for (const candidate of scored) {
       if (group.length >= maxSize) break;
       group.push(candidate.id);
       assigned.add(candidate.id);
+      if (candidate.country) groupCountries.add(candidate.country);
     }
 
     if (group.length >= minSize) groups.push(group);
@@ -1015,8 +1022,9 @@ router.post("/shine/scavenger/run-matching", async (req, res): Promise<void> => 
   const userData = eligibleUsers.map(u => ({
     id: u.id,
     name: u.name,
+    country: u.country ?? null,
+    // country intentionally excluded from text — matched for diversity, not similarity
     text: [
-      u.country ? `From: ${u.country}` : "",
       u.year ? `Year: ${u.year}` : "",
       u.concentration ? `Concentration: ${u.concentration}` : "",
       u.dorm ? `Dorm: ${u.dorm}` : "",
@@ -1045,11 +1053,11 @@ router.post("/shine/scavenger/run-matching", async (req, res): Promise<void> => 
         .map((m, i) => `Student ${i + 1}: ${m.text.slice(0, 300) || "No profile info yet"}`)
         .join("\n\n");
 
-      const prompt = `You are a Harvard International Students program coordinator. These students were matched into a group based on shared profile signals — country of origin, concentration, dorm, interests, journal entries, and posts.
+      const prompt = `You are a Harvard International Students program coordinator. These students were intentionally matched across different countries to celebrate international diversity, while also sharing common interests, academic paths, or goals.
 
 ${membersText}
 
-Write 1-2 friendly sentences (max 60 words) explaining why this group was matched. Focus on shared themes: similar backgrounds, academic interests, dorm proximity, or personal goals. Start with "You were matched because..." and do NOT mention names or identifying info.`;
+Write 1-2 friendly sentences (max 60 words) explaining why this group was matched. Highlight the mix of international backgrounds alongside their shared interests or goals. Start with "You were matched because..." and do NOT mention names or identifying info.`;
 
       summary = (await callOpenAI(prompt)).trim() || summary;
     } catch (_) { /* use default */ }
