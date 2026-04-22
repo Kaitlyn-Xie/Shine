@@ -644,7 +644,6 @@ function HuntPostBottomSheet({ post, onClose }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', padding: '4px 10px', borderRadius: 20, background: '#E8F8F0', color: '#1B8757' }}>🗺️ HUNT</span>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', padding: '4px 10px', borderRadius: 20, background: '#EDE9FE', color: '#7C3AED' }}>🤖 AI Match</span>
-          {post.location?.name && <span style={{ fontSize: 11, color: '#9A9A9A', fontWeight: 500 }}>📍 {post.location.name}</span>}
         </div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <CloseIcon size={18} color="#9A9A9A" />
@@ -654,6 +653,17 @@ function HuntPostBottomSheet({ post, onClose }) {
       {/* Selfie */}
       {post.img && (
         <img src={post.img} alt="Hunt completion selfie" style={{ width: '100%', maxHeight: 260, objectFit: 'cover', display: 'block' }} />
+      )}
+
+      {/* Location tag */}
+      {post.location?.name && (
+        <div style={{ margin: '12px 16px 0', padding: '10px 14px', borderRadius: 12, background: '#F0FDF4', border: '1.5px solid #BBF7D0', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 20 }}>📍</span>
+          <div>
+            <div style={{ fontSize: 12, fontWeight: 800, color: '#1B8757' }}>{post.location.name}</div>
+            <div style={{ fontSize: 10, color: '#6B7280', marginTop: 1 }}>{post.location.lat?.toFixed(4)}, {post.location.lng?.toFixed(4)}</div>
+          </div>
+        </div>
       )}
 
       {/* Caption + footer */}
