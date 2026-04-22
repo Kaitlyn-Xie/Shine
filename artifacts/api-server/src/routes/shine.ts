@@ -675,6 +675,21 @@ router.post("/shine/scavenger/queue", async (req, res): Promise<void> => {
   const user = await getShineUser(sessionToken);
   if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
 
+  // Block if user has an active (non-completed) match group
+  const allGroups = await db.select().from(shineMatchGroupsTable);
+  const activeGroup = allGroups.find(g =>
+    g.memberIds.split(",").map(Number).includes(user.id) &&
+    g.status !== "completed"
+  );
+  if (activeGroup) {
+    res.status(409).json({
+      error: "active_group",
+      message: "Complete your current mission first before joining a new match.",
+      groupId: activeGroup.id,
+    });
+    return;
+  }
+
   await db
     .insert(shineMatchQueueTable)
     .values({ userId: user.id })
@@ -796,11 +811,22 @@ router.get("/shine/scavenger/my-participation", async (req, res): Promise<void> 
 
   const totalQueue = await db.select().from(shineMatchQueueTable);
 
+  // Check for an active (non-completed) match group
+  const allGroups = await db.select().from(shineMatchGroupsTable);
+  const activeGroup = allGroups.find(g =>
+    g.memberIds.split(",").map(Number).includes(user.id) &&
+    g.status !== "completed"
+  );
+
   res.json({
     isScavengerOptIn: user.isScavengerOptIn,
     inQueue: !!queueRow,
     queueSize: totalQueue.length,
     joinedAt: queueRow?.joinedAt?.toISOString() ?? null,
+    hasActiveGroup: !!activeGroup,
+    activeGroupId: activeGroup?.id ?? null,
+    activeGroupStatus: activeGroup?.status ?? null,
+    activeGroupMissionTitle: activeGroup?.chosenMissionTitle ?? null,
   });
 });
 

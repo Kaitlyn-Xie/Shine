@@ -492,8 +492,20 @@ export default function ScavengerMatch({ user }) {
   const [runningMatch, setRunningMatch] = useState(false)
   const [matchResult, setMatchResult] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [hasActiveGroup, setHasActiveGroup] = useState(false)
+  const [activeGroupId, setActiveGroupId] = useState(null)
+  const [activeGroupMissionTitle, setActiveGroupMissionTitle] = useState(null)
 
   useEffect(() => { loadAll() }, [])
+
+  function applyParticipation(p) {
+    setIsOptIn(p?.isScavengerOptIn ?? false)
+    setInQueue(p?.inQueue ?? false)
+    setQueueSize(p?.queueSize ?? 0)
+    setHasActiveGroup(p?.hasActiveGroup ?? false)
+    setActiveGroupId(p?.activeGroupId ?? null)
+    setActiveGroupMissionTitle(p?.activeGroupMissionTitle ?? null)
+  }
 
   async function loadAll() {
     setLoading(true)
@@ -502,9 +514,7 @@ export default function ScavengerMatch({ user }) {
         api.getMyParticipation(),
         api.getMyGroups(),
       ])
-      setIsOptIn(participation?.isScavengerOptIn ?? false)
-      setInQueue(participation?.inQueue ?? false)
-      setQueueSize(participation?.queueSize ?? 0)
+      applyParticipation(participation)
       setMyGroups(groups || [])
     } catch (e) {
       console.error('ScavengerMatch load error', e)
@@ -534,7 +544,13 @@ export default function ScavengerMatch({ user }) {
       setInQueue(true)
       setQueueSize(result?.queueSize ?? queueSize + 1)
     } catch (e) {
-      console.error(e)
+      // If blocked because of active group, refresh participation to show correct state
+      if (e?.status === 409 || e?.message?.includes('409')) {
+        const participation = await api.getMyParticipation()
+        applyParticipation(participation)
+      } else {
+        console.error(e)
+      }
     }
   }
 
@@ -555,11 +571,9 @@ export default function ScavengerMatch({ user }) {
       const result = await api.runMatching()
       setMatchResult(result)
       if (result.groupsCreated > 0) {
-        const groups = await api.getMyGroups()
+        const [groups, participation] = await Promise.all([api.getMyGroups(), api.getMyParticipation()])
         setMyGroups(groups || [])
-        const participation = await api.getMyParticipation()
-        setInQueue(participation?.inQueue ?? false)
-        setQueueSize(participation?.queueSize ?? 0)
+        applyParticipation(participation)
       }
     } catch (e) {
       setMatchResult({ error: e.message })
@@ -657,6 +671,30 @@ export default function ScavengerMatch({ user }) {
                 <div style={{ marginTop: 10, padding: '10px 12px', borderRadius: 12, background: matchResult.error ? '#FEF2F2' : LIGHT, color: matchResult.error ? '#DC2626' : PRIMARY, fontSize: 13, fontWeight: 600 }}>
                   {matchResult.error ? `Error: ${matchResult.error}` : `✅ ${matchResult.message}`}
                 </div>
+              )}
+            </div>
+          ) : hasActiveGroup ? (
+            /* ── Locked: active group mission in progress ── */
+            <div style={{ background: '#FFFBEB', borderRadius: 18, padding: '16px 18px', border: '1.5px solid #FCD34D' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+                <div style={{ fontSize: 28, flexShrink: 0, marginTop: 2 }}>🔒</div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: '#B45309', marginBottom: 3 }}>Mission in progress</div>
+                  <div style={{ fontSize: 13, color: '#92400E', lineHeight: 1.55 }}>
+                    You can only be in one AI match group at a time.{activeGroupMissionTitle ? ` Complete "${activeGroupMissionTitle}" with your current group first.` : ' Complete your current group mission first.'}
+                  </div>
+                </div>
+              </div>
+              {activeGroupId && (
+                <button
+                  onClick={() => {
+                    const g = myGroups.find(x => x.id === activeGroupId)
+                    if (g) setSelectedGroup(g)
+                  }}
+                  style={{ width: '100%', padding: '11px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #D97706, #B45309)', color: '#fff', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}
+                >
+                  Go to my active group →
+                </button>
               )}
             </div>
           ) : (
