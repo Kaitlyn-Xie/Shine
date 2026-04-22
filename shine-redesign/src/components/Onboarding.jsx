@@ -55,6 +55,27 @@ const CONCENTRATIONS = [
   'Undecided / Exploring',
 ]
 
+const COUNTRIES = [
+  'Afghanistan', 'Albania', 'Algeria', 'Angola', 'Argentina', 'Armenia', 'Australia',
+  'Austria', 'Azerbaijan', 'Bahrain', 'Bangladesh', 'Belarus', 'Belgium', 'Bolivia',
+  'Bosnia and Herzegovina', 'Brazil', 'Bulgaria', 'Cambodia', 'Cameroon', 'Canada',
+  'Chile', 'China', 'Colombia', 'Congo', 'Costa Rica', 'Croatia', 'Cuba', 'Cyprus',
+  'Czech Republic', 'Denmark', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador',
+  'Estonia', 'Ethiopia', 'Finland', 'France', 'Georgia', 'Germany', 'Ghana', 'Greece',
+  'Guatemala', 'Honduras', 'Hong Kong', 'Hungary', 'Iceland', 'India', 'Indonesia',
+  'Iran', 'Iraq', 'Ireland', 'Israel', 'Italy', 'Jamaica', 'Japan', 'Jordan', 'Kazakhstan',
+  'Kenya', 'Kuwait', 'Kyrgyzstan', 'Latvia', 'Lebanon', 'Lithuania', 'Luxembourg',
+  'Malaysia', 'Mexico', 'Moldova', 'Mongolia', 'Morocco', 'Mozambique', 'Myanmar',
+  'Nepal', 'Netherlands', 'New Zealand', 'Nicaragua', 'Nigeria', 'North Macedonia',
+  'Norway', 'Oman', 'Pakistan', 'Palestine', 'Panama', 'Paraguay', 'Peru', 'Philippines',
+  'Poland', 'Portugal', 'Qatar', 'Romania', 'Russia', 'Rwanda', 'Saudi Arabia', 'Senegal',
+  'Serbia', 'Singapore', 'Slovakia', 'Slovenia', 'Somalia', 'South Africa', 'South Korea',
+  'Spain', 'Sri Lanka', 'Sudan', 'Sweden', 'Switzerland', 'Syria', 'Taiwan', 'Tajikistan',
+  'Tanzania', 'Thailand', 'Tunisia', 'Turkey', 'Turkmenistan', 'Uganda', 'Ukraine',
+  'United Arab Emirates', 'United Kingdom', 'United States', 'Uruguay', 'Uzbekistan',
+  'Venezuela', 'Vietnam', 'Yemen', 'Zimbabwe',
+]
+
 const HOUSES = [
   'Apley Court', 'Canaday Hall', 'Grays Hall', 'Greenough Hall',
   'Hollis Hall', 'Holworthy Hall', 'Hurlbut Hall', 'Lionel Hall',
@@ -200,13 +221,34 @@ export default function Onboarding({ user, onComplete }) {
 
         {/* ── Step: Country ── */}
         {current.id === 'country' && (
-          <input
-            value={country} onChange={e => setCountry(e.target.value)}
-            placeholder="e.g. China, Brazil, Germany…"
-            autoFocus
-            onKeyDown={e => e.key === 'Enter' && handleNext()}
-            style={inputStyle}
-          />
+          <div style={{ position: 'relative' }}>
+            <select
+              value={country}
+              onChange={e => setCountry(e.target.value)}
+              style={{
+                width: '100%', padding: '16px 44px 16px 18px',
+                border: `2px solid ${country ? '#FF9A3C' : 'var(--border)'}`,
+                borderRadius: 16, fontSize: 16, color: country ? 'var(--text)' : '#AAAAAA',
+                background: '#fff', outline: 'none', fontFamily: 'inherit',
+                boxSizing: 'border-box', cursor: 'pointer',
+                appearance: 'none', WebkitAppearance: 'none',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+              }}
+            >
+              <option value="" disabled>Select your home country…</option>
+              {COUNTRIES.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <svg
+              style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+              width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke={country ? '#FF9A3C' : '#AAAAAA'} strokeWidth="2.5"
+              strokeLinecap="round" strokeLinejoin="round"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
         )}
 
         {/* ── Step: Year ── */}
