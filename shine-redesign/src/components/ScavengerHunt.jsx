@@ -587,11 +587,24 @@ export default function ScavengerHunt({ user }) {
 
       {/* ── Inner Tabs ── */}
       <div style={{ background: '#fff', borderBottom: '1px solid var(--border)', display: 'flex', flexShrink: 0 }}>
-        {[{ id: 'missions', label: '🗺️ Missions' }, { id: 'match', label: '🤝 Match' }, { id: 'leaderboard', label: '🏆 Board' }].map(t => (
-          <button key={t.id} onClick={() => setActiveTab(t.id)} style={{ flex: 1, padding: '12px 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: activeTab === t.id ? 700 : 500, color: activeTab === t.id ? HUNT_PRIMARY : '#6B7280', borderBottom: activeTab === t.id ? `2.5px solid ${HUNT_PRIMARY}` : '2.5px solid transparent', transition: 'all 0.15s' }}>
-            {t.label}
-          </button>
-        ))}
+        {[
+          { id: 'missions',     emoji: '🗺️', label: 'Missions',  sub: 'Go solo or with friends', color: HUNT_PRIMARY },
+          { id: 'match',        emoji: '🤖', label: 'AI Match',   sub: 'Get matched by AI',        color: '#7C3AED'   },
+          { id: 'leaderboard',  emoji: '🏆', label: 'Board',      sub: 'Dorm rankings',            color: '#F59E0B'   },
+        ].map(t => {
+          const active = activeTab === t.id
+          return (
+            <button key={t.id} onClick={() => setActiveTab(t.id)} style={{
+              flex: 1, padding: '10px 4px 8px', background: active ? `${t.color}0D` : 'none',
+              border: 'none', cursor: 'pointer', borderBottom: active ? `2.5px solid ${t.color}` : '2.5px solid transparent',
+              transition: 'all 0.15s', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+            }}>
+              <span style={{ fontSize: 15 }}>{t.emoji}</span>
+              <span style={{ fontSize: 12, fontWeight: active ? 800 : 600, color: active ? t.color : '#6B7280', transition: 'color 0.15s' }}>{t.label}</span>
+              <span style={{ fontSize: 9.5, fontWeight: 500, color: active ? t.color : '#9CA3AF', letterSpacing: '0.1px', lineHeight: 1.2, transition: 'color 0.15s' }}>{t.sub}</span>
+            </button>
+          )
+        })}
       </div>
 
       {/* ── Missions Tab ── */}
