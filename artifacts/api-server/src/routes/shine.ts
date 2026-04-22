@@ -704,8 +704,12 @@ router.get("/shine/scavenger/queue/status", async (req, res): Promise<void> => {
   if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
 
   const queue = await db.select().from(shineMatchQueueTable);
-  const inQueue = queue.some(q => q.userId === user.id);
-  res.json({ queueSize: queue.length, inQueue });
+  // Remove stale entries from count
+  const existingGroups = await db.select().from(shineMatchGroupsTable);
+  const alreadyGrouped = new Set(existingGroups.flatMap(g => g.memberIds.split(",").map(Number)));
+  const activeQueue = queue.filter(q => !alreadyGrouped.has(q.userId));
+  const inQueue = activeQueue.some(q => q.userId === user.id);
+  res.json({ queueSize: activeQueue.length, inQueue });
 });
 
 // ── Available Missions (for groups to choose from) ───────────────────────────
@@ -984,9 +988,13 @@ router.post("/shine/scavenger/run-matching", async (req, res): Promise<void> => 
     res.json({ message: "Queue is empty", groupsCreated: 0 }); return;
   }
 
-  // Find who's already been matched (in any active group)
+  // Auto-clean: remove anyone already in a group from the queue (handles stale entries)
   const existingGroups = await db.select().from(shineMatchGroupsTable);
   const alreadyGrouped = new Set(existingGroups.flatMap(g => g.memberIds.split(",").map(Number)));
+  const staleIds = queue.map(q => q.userId).filter(id => alreadyGrouped.has(id));
+  if (staleIds.length > 0) {
+    await db.delete(shineMatchQueueTable).where(inArray(shineMatchQueueTable.userId, staleIds));
+  }
 
   const eligibleIds = queue.map(q => q.userId).filter(id => !alreadyGrouped.has(id));
 
