@@ -738,60 +738,68 @@ function InlineMapPicker({ initialPin, onConfirm, onCancel }) {
 // ── Weekly Prompts ────────────────────────────────────────────────────────────
 
 const PRE_ARRIVAL_PROMPTS = [
-  { category: 'Hometown & Everyday Life', prompt: '"This is home" — Share a photo of a place that feels like home to you (your street, favourite café, room, park) and tell us why it\'s special.' },
-  { category: 'Hometown & Everyday Life', prompt: '"Your daily view" — Share a photo taken right outside your window.' },
-  { category: 'Hometown & Everyday Life', prompt: '"Local flavor" — Share a photo or recipe of your favourite local dish.' },
-  { category: 'Hometown & Everyday Life', prompt: 'Hidden gem — A place in your hometown that isn\'t well-known but you love.' },
-  { category: 'Culture & Traditions', prompt: 'Celebration moment — Share a photo from a local celebration or your country\'s public holiday.' },
-  { category: 'Culture & Traditions', prompt: 'Casual dress & style — Share a photo of your everyday style.' },
-  { category: 'Culture & Traditions', prompt: 'Language — Share a short greeting in your language and teach us how to say it!' },
-  { category: 'Culture & Traditions', prompt: 'Story of my name — Explain your name and its origins. How do you pronounce it?' },
-  { category: 'Preparing to Say Goodbye', prompt: 'What are you most nervous about before you leave?' },
-  { category: 'Preparing to Say Goodbye', prompt: 'What are you most excited about for your time at Harvard?' },
-  { category: 'Preparing to Say Goodbye', prompt: 'Bucket list of "lasts" — What do you want to do before you depart?' },
-  { category: 'Preparing to Say Goodbye', prompt: 'What expectations or questions do you have about your new experience?' },
-  { category: 'Preparing to Say Goodbye', prompt: 'Farewell experience — How are you saying goodbye, and did you receive any special farewell gifts?' },
-  { category: 'Preparing to Say Goodbye', prompt: '"What are you bringing from home?" — Share a photo of something that will remind you of home.' },
-  { category: 'Preparation Tips', prompt: 'Packing hacks — What\'s the one packing tip you\'d share with everyone?' },
-  { category: 'Preparation Tips', prompt: 'Information you\'re checking — What resources are you using to prepare?' },
-  { category: 'Preparation Tips', prompt: 'Budgeting & finance — How are you planning your finances for this big move?' },
-  { category: 'Preparation Tips', prompt: 'Advice for your future self — What do you wish you could tell yourself once you arrive?' },
-  { category: 'Preparation Tips', prompt: 'Support network — What will you do to stay connected and supported while abroad?' },
-  { category: 'Journey to Campus', prompt: '"How I got to campus" — Share a photo of the modes of transportation you took to get here.' },
+  // Your World in Frame
+  { category: 'Your World in Frame', prompt: '📷 Share a photo of the view from your window right now. What does it say about where you come from? Tell us one thing a stranger would never notice in that scene.' },
+  { category: 'Your World in Frame', prompt: '📷 Step outside your front door and photograph what you see. What story does this corner of the world tell about everyday life where you\'re from?' },
+  { category: 'Your World in Frame', prompt: '📷 Capture your neighborhood at the time of day you love most. Share the photo and describe what makes that particular hour feel like yours.' },
+  { category: 'Your World in Frame', prompt: '📷 Find a detail most people walk past — a worn tile, a faded sign, a familiar texture. Photograph it and tell us why it matters to you.' },
+  // Who I Am
+  { category: 'Who I Am', prompt: '📷 Share a photo of the most important memento you\'re bringing to Harvard. What does it represent, and why couldn\'t you leave without it?' },
+  { category: 'Who I Am', prompt: '📷 Photograph something that belongs to a family member you deeply admire. What did they teach you, and how does that shape who you are now?' },
+  { category: 'Who I Am', prompt: '📷 Show us something in your home that would be hard to explain to someone who didn\'t grow up where you did. Walk us through it.' },
+  { category: 'Who I Am', prompt: 'What\'s one part of your identity you\'re proud of but rarely get to explain to people outside your community? Share the story — and a photo if you can.' },
+  // What Shapes Me
+  { category: 'What Shapes Me', prompt: '📷 Share a photo from a celebration, ritual, or tradition that\'s central to your culture. What would be lost if it disappeared?' },
+  { category: 'What Shapes Me', prompt: '📷 Photograph something from your daily routine that\'s deeply tied to where you\'re from — a meal, a ritual, a sound you\'ll miss. What does it mean to carry this with you?' },
+  { category: 'What Shapes Me', prompt: '📷 Share a photo of a dish that tastes like home. What memory or feeling does it carry? Is there a story behind how you first learned to love it?' },
+  { category: 'What Shapes Me', prompt: 'What\'s a value your community or family holds that you hope to carry with you to Harvard — even if no one there would recognize it by name?' },
+  // The Space Between
+  { category: 'The Space Between', prompt: '📷 Capture one of your "lasts" before you leave — a final walk, a last meal, a familiar face. Share the photo and what that moment felt like.' },
+  { category: 'The Space Between', prompt: '📷 Show us something you couldn\'t leave behind. What does it mean to bring a piece of home across the world to a new life?' },
+  { category: 'The Space Between', prompt: 'What are you most afraid to lose by leaving? What are you most hopeful to find? Be as honest as you can.' },
+  { category: 'The Space Between', prompt: 'If you could leave one piece of advice for someone who will grow up in your hometown after you\'re gone, what would it be?' },
+  // Hopes & Fears
+  { category: 'Hopes & Fears', prompt: '📷 Share a photo of somewhere you feel most like yourself. Can you carry that feeling to Cambridge? How will you recreate it?' },
+  { category: 'Hopes & Fears', prompt: 'What assumption do people from other countries often make about your home that you\'d most want to correct? Share a photo that tells a truer story.' },
+  { category: 'Hopes & Fears', prompt: 'What question do you most want answered when you arrive at Harvard? What\'s driving it?' },
+  { category: 'Journey to Campus', prompt: '📷 Share a photo from your journey to campus — a layover, a first glimpse of a new skyline, the moment you landed. What were you feeling?' },
 ]
 
 const ON_CAMPUS_PROMPTS = [
-  { category: 'First Impressions', prompt: 'First day on campus — What was the very first thing you noticed?' },
-  { category: 'First Impressions', prompt: 'First meal in the US — What did you eat, and what did you think?' },
-  { category: 'First Impressions', prompt: 'Your dorm — Show us your new home!' },
-  { category: 'First Impressions', prompt: 'Something that surprised you about campus life.' },
-  { category: 'First Impressions', prompt: 'Campus landmark — Share your first visit to a Harvard landmark.' },
-  { category: 'First Impressions', prompt: 'An interesting local experience you\'ve had since arriving.' },
-  { category: 'New Learning Experiences', prompt: 'Class — Share something interesting from your first week of classes.' },
-  { category: 'New Learning Experiences', prompt: 'Study spot — Where do you study best on (or off) campus?' },
-  { category: 'New Learning Experiences', prompt: 'Classroom culture — Share something about the teaching style that surprised you.' },
-  { category: 'New Learning Experiences', prompt: 'A new subject you\'re learning about that you never studied before.' },
-  { category: 'New Learning Experiences', prompt: 'Academic tips — What advice would you give yourself or a future student?' },
-  { category: 'New Learning Experiences', prompt: 'Words of encouragement for your fellow international students.' },
-  { category: 'Adjusting to American Culture', prompt: 'Your culture shock moment — What caught you most off guard?' },
-  { category: 'Adjusting to American Culture', prompt: 'Something familiar you found here that felt like home.' },
-  { category: 'Adjusting to American Culture', prompt: 'Something strange about American daily life you\'ve noticed.' },
-  { category: 'Adjusting to American Culture', prompt: 'An American habit you\'ve observed.' },
-  { category: 'Adjusting to American Culture', prompt: 'A habit of yours that others have noticed or commented on.' },
-  { category: 'Adjusting to American Culture', prompt: 'A new or surprising way you\'ve heard a particular English word used.' },
-  { category: 'Everyday Moments', prompt: 'Connecting with friends back home — How do you stay in touch?' },
-  { category: 'Everyday Moments', prompt: 'Your new daily view — Out your dorm window or on your walk to class.' },
-  { category: 'Everyday Moments', prompt: 'Favourite on-campus spot.' },
-  { category: 'Everyday Moments', prompt: 'Favourite off-campus spot.' },
-  { category: 'Everyday Moments', prompt: 'What you\'re up to on the weekends.' },
-  { category: 'Everyday Moments', prompt: 'New food adventures — What have you tried that you\'d never had before?' },
-  { category: 'Everyday Moments', prompt: 'Your new routine — What does a typical weekday look like for you now?' },
-  { category: 'Reflections & Tips', prompt: 'What you wish you had known before coming to Harvard.' },
-  { category: 'Reflections & Tips', prompt: 'Best packing advice — What would you tell someone packing for the first time?' },
-  { category: 'Reflections & Tips', prompt: 'Budgeting reality — How is the financial side going so far?' },
-  { category: 'Reflections & Tips', prompt: 'Stress & self-care — Share a resource, habit, or tip that helps you.' },
-  { category: 'Reflections & Tips', prompt: 'What are you most proud of since arriving?' },
-  { category: 'Reflections & Tips', prompt: 'Advice for future incoming international students — what would you say?' },
+  // First Frames
+  { category: 'First Frames', prompt: '📷 Share the very first photo you took at Harvard — whatever it captured, wherever you were. What were you feeling in that moment?' },
+  { category: 'First Frames', prompt: '📷 Photograph your room right now. What did you bring that makes it feel like yours? What\'s still missing?' },
+  { category: 'First Frames', prompt: '📷 Share a photo of your first meal in Cambridge. Was it familiar or completely new? What did it make you think of?' },
+  { category: 'First Frames', prompt: '📷 Capture something from your first week that genuinely surprised you. What does that image reveal about where you are — and where you\'re from?' },
+  { category: 'First Frames', prompt: '📷 Share a photo of a Harvard landmark seen through your eyes. What does this place look like to someone arriving from your world?' },
+  // Identity Here
+  { category: 'Identity Here', prompt: '📷 Share a photo of a moment when you felt most like yourself here. What made it feel real and true to who you are?' },
+  { category: 'Identity Here', prompt: '📷 Find something at Harvard that connects to where you come from. Photograph it and tell us what bridge it builds.' },
+  { category: 'Identity Here', prompt: 'What part of your identity feels more visible here than it ever did at home? What part feels less visible? Share a photo that captures how you\'re holding both.' },
+  { category: 'Identity Here', prompt: 'How has being far from home changed how you see yourself? Has anything surprised you about who you\'re becoming?' },
+  // Bridging Worlds
+  { category: 'Bridging Worlds', prompt: '📷 Find something in Cambridge that reminds you of home — a street, a smell, a sound, a face. Share a photo and the memory it unlocks.' },
+  { category: 'Bridging Worlds', prompt: '📷 Photograph a local shop, dish, or place that has a parallel back home. What\'s the same? What\'s different? What does that gap tell you?' },
+  { category: 'Bridging Worlds', prompt: 'What\'s something from your home culture you wish you could hand to every classmate here — a food, a phrase, a way of being together? Tell the story.' },
+  { category: 'Bridging Worlds', prompt: '📷 Share a photo of a conversation or gathering happening around you. What kinds of human stories can you imagine unfolding in it?' },
+  // Empathy in Action
+  { category: 'Empathy in Action', prompt: '📷 Photograph a place on campus where many kinds of people come together. What does it feel like to be part of that — as an outsider, as a newcomer, as yourself?' },
+  { category: 'Empathy in Action', prompt: 'Share a moment when someone here helped you feel less alone. What did they do, and what did it teach you about how small acts cross borders?' },
+  { category: 'Empathy in Action', prompt: '📷 Photograph something that looks completely ordinary to locals here but was entirely new to you. Why does that gap matter?' },
+  { category: 'Empathy in Action', prompt: 'When have you had to explain something about your background that you\'d never thought twice about? What did that moment teach you about perspective?' },
+  { category: 'Empathy in Action', prompt: '📷 Find a piece of public art, a mural, or a memorial on or near campus. Photograph it — whose story is it telling, and what does it stir in you?' },
+  // Everyday Human
+  { category: 'Everyday Human', prompt: '📷 Capture your morning routine here. What does the start of your day look like now — and how is it different from home?' },
+  { category: 'Everyday Human', prompt: '📷 Share a photo of your study spot. What does this place say about how you work and what you need to feel settled?' },
+  { category: 'Everyday Human', prompt: '📷 Document a small, ordinary kindness you witnessed today — a held door, a shared umbrella, a smile across a dining table. Why does it matter?' },
+  { category: 'Everyday Human', prompt: 'What\'s the most universal human experience you\'ve noticed at Harvard — something that seems to cross every culture, background, and language?' },
+  { category: 'Everyday Human', prompt: '📷 Share a photo of your dorm window view. How does it compare to the view you left behind? What do you notice now that you didn\'t expect?' },
+  // Reflections
+  { category: 'Reflections', prompt: '📷 Share a photo of a moment from this week that you want to remember. What made it worth keeping?' },
+  { category: 'Reflections', prompt: 'What do you wish someone had told you before you arrived — not a practical tip, but something true about how this would feel?' },
+  { category: 'Reflections', prompt: 'What are you most proud of since arriving? It doesn\'t have to be academic. It can be as quiet as making it through a hard day.' },
+  { category: 'Reflections', prompt: '📷 Take a self-portrait — not posed, just real. What does the person in the photo carry that you\'d want others here to understand?' },
+  { category: 'Reflections', prompt: 'If you could send one message to every international student arriving next year, what would you say — in your own words, from your own experience?' },
 ]
 
 function WeeklyPromptBanner({ user, onRespond }) {
@@ -835,7 +843,7 @@ function WeeklyPromptBanner({ user, onRespond }) {
           boxShadow: '0 2px 8px rgba(255,154,60,0.3)',
         }}
       >
-        ✍️ Respond to this prompt
+        📷 Share a photo + respond
       </button>
     </div>
   )
