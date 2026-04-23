@@ -874,7 +874,7 @@ function HuntPostCard({ item, index }) {
           🗺️ HUNT
         </div>
         <div style={{ background: 'rgba(124,58,237,0.85)', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 8 }}>
-          🤖 AI Match
+          👭 Get Matched
         </div>
       </div>
 

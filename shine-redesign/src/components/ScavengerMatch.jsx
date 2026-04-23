@@ -303,7 +303,7 @@ function GroupMissionCompletionSheet({ group, onClose, onComplete }) {
               <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
                 <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 10, background: '#F0F0F0', color: '#1A1A1A' }}>Base: +{result.pts.base}</span>
                 {result.pts.bonus > 0 && <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 10, background: LIGHT, color: PRIMARY }}>Bonuses: +{result.pts.bonus}</span>}
-                <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 10, background: '#EDE9FE', color: PURPLE }}>🤖 AI Match: +{MATCH_GROUP_BONUS}</span>
+                <span style={{ fontSize: 11, fontWeight: 800, padding: '4px 10px', borderRadius: 10, background: '#EDE9FE', color: PURPLE }}>👭 Get Matched: +{MATCH_GROUP_BONUS}</span>
               </div>
             </div>
             {result.shared && (
@@ -325,7 +325,7 @@ function GroupMissionCompletionSheet({ group, onClose, onComplete }) {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
                   <div style={{ fontSize: 18, fontWeight: 900 }}>Complete Mission</div>
-                  <span style={{ fontSize: 10, fontWeight: 800, background: '#EDE9FE', color: PURPLE, padding: '3px 8px', borderRadius: 8 }}>🤖 AI Match</span>
+                  <span style={{ fontSize: 10, fontWeight: 800, background: '#EDE9FE', color: PURPLE, padding: '3px 8px', borderRadius: 8 }}>👭 Get Matched</span>
                 </div>
                 <div style={{ fontSize: 13, color: '#6B7280' }}>{group.chosenMissionTitle}</div>
               </div>
@@ -822,7 +822,7 @@ export default function ScavengerMatch({ user }) {
                   disabled={runningMatch}
                   style={{ flex: 1, padding: '10px 0', borderRadius: 12, border: 'none', background: PURPLE, color: '#fff', fontWeight: 800, fontSize: 13, cursor: runningMatch ? 'default' : 'pointer', opacity: runningMatch ? 0.7 : 1 }}
                 >
-                  {runningMatch ? '⏳ Matching…' : '🤖 Run AI Matching Now'}
+                  {runningMatch ? '⏳ Matching…' : '👭 Run Matching Now'}
                 </button>
                 <button
                   onClick={handleLeaveQueue}

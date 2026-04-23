@@ -643,7 +643,7 @@ function HuntPostBottomSheet({ post, onClose }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', padding: '4px 10px', borderRadius: 20, background: '#E8F8F0', color: '#1B8757' }}>🗺️ HUNT</span>
-          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', padding: '4px 10px', borderRadius: 20, background: '#EDE9FE', color: '#7C3AED' }}>🤖 AI Match</span>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', padding: '4px 10px', borderRadius: 20, background: '#EDE9FE', color: '#7C3AED' }}>👭 Get Matched</span>
         </div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <CloseIcon size={18} color="#9A9A9A" />

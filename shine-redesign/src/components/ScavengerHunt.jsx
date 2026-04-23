@@ -613,7 +613,7 @@ export default function ScavengerHunt({ user }) {
       <div style={{ background: '#fff', borderBottom: '1px solid var(--border)', display: 'flex', flexShrink: 0 }}>
         {[
           { id: 'missions',     emoji: '🗺️', label: 'Missions',  sub: 'Go solo or with friends', color: HUNT_PRIMARY },
-          { id: 'match',        emoji: '🤖', label: 'AI Match',   sub: 'Get matched by AI',        color: '#7C3AED'   },
+          { id: 'match',        emoji: '👭', label: 'Get Matched', sub: 'Find your group',          color: '#7C3AED'   },
           { id: 'leaderboard',  emoji: '🏆', label: 'Board',      sub: 'Dorm rankings',            color: '#F59E0B'   },
         ].map(t => {
           const active = activeTab === t.id
