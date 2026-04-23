@@ -900,6 +900,21 @@ router.post("/shine/scavenger/groups/:id/choose-mission", async (req, res): Prom
   const memberIds = group.memberIds.split(",").map(Number);
   if (!memberIds.includes(user.id)) { res.status(403).json({ error: "Not a member of this group" }); return; }
 
+  // Block if any group member has already completed this mission
+  const prior = await db
+    .select({ userId: shineHuntCompletionsTable.userId })
+    .from(shineHuntCompletionsTable)
+    .where(
+      and(
+        eq(shineHuntCompletionsTable.missionId, String(missionId)),
+        inArray(shineHuntCompletionsTable.userId, memberIds)
+      )
+    );
+  if (prior.length > 0) {
+    res.status(409).json({ error: "This mission has already been completed by a group member. Please choose a different one." });
+    return;
+  }
+
   // Update the group
   await db
     .update(shineMatchGroupsTable)

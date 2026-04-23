@@ -75,18 +75,30 @@ function timeAgo(iso) {
 function MissionChooserSheet({ groupId, onChosen, onClose }) {
   const [loading, setLoading] = useState(false)
   const [chosen, setChosen] = useState(null)
+  const [completedIds, setCompletedIds] = useState(new Set())
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    api.getMyParticipation()
+      .then(data => setCompletedIds(new Set(data.completedMissionIds ?? [])))
+      .catch(() => {})
+  }, [])
 
   // Use the top-level MISSIONS from the game data
   const available = MISSIONS.filter(m => m.type === 'location' || m.type === 'creative' || m.type === 'social').slice(0, 12)
 
   async function handleChoose(mission) {
+    if (completedIds.has(mission.id)) return
+    setError(null)
     setChosen(mission.id)
     setLoading(true)
     try {
       await api.chooseGroupMission(groupId, mission.id, mission.title)
       onChosen({ missionId: mission.id, missionTitle: mission.title })
     } catch (e) {
-      console.error(e)
+      const msg = e?.message || ''
+      setError(msg.includes('already been completed') ? 'A group member already completed this mission. Pick a different one.' : 'Could not choose mission. Try again.')
+      setChosen(null)
     } finally {
       setLoading(false)
     }
@@ -107,31 +119,43 @@ function MissionChooserSheet({ groupId, onChosen, onClose }) {
             <CloseIcon size={20} color="#9A9A9A" />
           </button>
         </div>
+        {error && (
+          <div style={{ margin: '0 16px 10px', padding: '10px 14px', background: '#FEF2F2', borderRadius: 10, border: '1px solid #FECACA', fontSize: 13, color: '#DC2626', fontWeight: 600 }}>
+            ⚠️ {error}
+          </div>
+        )}
         <div style={{ overflowY: 'auto', flex: 1, padding: '0 16px 32px' }}>
-          {available.map(m => (
+          {available.map(m => {
+            const done = completedIds.has(m.id)
+            const isChosen = chosen === m.id
+            return (
             <div
               key={m.id}
-              onClick={() => !loading && handleChoose(m)}
+              onClick={() => !loading && !done && handleChoose(m)}
               style={{
-                background: chosen === m.id ? LIGHT : '#F9FAFB',
+                background: done ? '#F3F4F6' : isChosen ? LIGHT : '#F9FAFB',
                 borderRadius: 16, padding: '14px 16px', marginBottom: 10,
-                border: `1.5px solid ${chosen === m.id ? PRIMARY + '55' : '#F0F0F0'}`,
-                cursor: loading ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 12,
-                opacity: loading && chosen !== m.id ? 0.5 : 1, transition: 'all 0.15s',
+                border: `1.5px solid ${done ? '#E5E7EB' : isChosen ? PRIMARY + '55' : '#F0F0F0'}`,
+                cursor: done ? 'not-allowed' : loading ? 'default' : 'pointer',
+                display: 'flex', alignItems: 'center', gap: 12,
+                opacity: (loading && !isChosen) || done ? 0.55 : 1, transition: 'all 0.15s',
               }}
             >
               <div style={{ fontSize: 28, width: 42, height: 42, borderRadius: 12, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}>{m.emoji}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{m.title}</div>
+                <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2, color: done ? '#9CA3AF' : '#1A1A1A' }}>{m.title}</div>
                 <div style={{ fontSize: 12, color: '#6B7280', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{m.desc}</div>
               </div>
-              {chosen === m.id && loading ? (
+              {done ? (
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', background: '#E5E7EB', borderRadius: 8, padding: '3px 8px', whiteSpace: 'nowrap' }}>✓ Done</div>
+              ) : isChosen && loading ? (
                 <div style={{ fontSize: 18 }}>⏳</div>
               ) : (
-                <div style={{ color: chosen === m.id ? PRIMARY : '#D1D5DB', fontSize: 20, fontWeight: 900 }}>›</div>
+                <div style={{ color: isChosen ? PRIMARY : '#D1D5DB', fontSize: 20, fontWeight: 900 }}>›</div>
               )}
             </div>
-          ))}
+          )
+          })}
         </div>
       </div>
     </div>,
