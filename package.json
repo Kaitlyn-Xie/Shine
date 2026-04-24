@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node server.mjs",
-    "build": "node -e \"console.log('shine-live: static file server — no Vite build required')\"",
+    "build": "mkdir -p dist/public/assets && cp -r public/. dist/public/ && cp index.html dist/public/index.html && echo 'shine-live: assets copied to dist/public'",
     "serve": "node server.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
