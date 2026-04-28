@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Component } from 'react'
 import BottomNav from './components/BottomNav'
 import MapHome from './components/MapHome'
 import PostFeed from './components/PostFeed'
@@ -8,6 +8,7 @@ import CreateContent from './components/CreateContent'
 import ScavengerHunt from './components/ScavengerHunt'
 import Login from './components/Login'
 import Onboarding from './components/Onboarding'
+import UserProfileSheet from './components/UserProfileSheet'
 import { MessageIcon, HeartIcon } from './components/Icons'
 import { api } from './lib/api'
 
@@ -16,11 +17,38 @@ const POST_OPTIONS = [
   { id: 'feed', Icon: HeartIcon,   label: 'Community Feed',      desc: 'Photos & stories from students',  color: '#3CB87A' },
 ]
 
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { error: null }
+  }
+  static getDerivedStateFromError(error) { return { error } }
+  componentDidCatch() {}
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', padding: 32, background: '#FFFBF0', textAlign: 'center' }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#FF9A3C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div style={{ fontWeight: 700, fontSize: 18, color: '#1A1A1A', marginBottom: 8 }}>Something went wrong</div>
+          <div style={{ fontSize: 14, color: '#888', marginBottom: 24 }}>Please refresh the page to continue.</div>
+          <button onClick={() => { this.setState({ error: null }); window.location.reload() }}
+            style={{ background: '#FF9A3C', color: '#fff', border: 'none', borderRadius: 12, padding: '12px 28px', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+            Refresh
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 function loadUser() {
   try { return JSON.parse(localStorage.getItem('shine_user') || 'null') } catch { return null }
 }
 
-export default function App() {
+function AppInner() {
   const [user, setUser] = useState(loadUser)
   const [tab, setTab] = useState('map')
   const [postView, setPostView] = useState('feed')
@@ -28,6 +56,12 @@ export default function App() {
   const [showCreate, setShowCreate] = useState(false)
   const [communityPosts, setCommunityPosts] = useState([])
   const [sunlightPosts, setSunlightPosts] = useState([])
+  const [viewingUserId, setViewingUserId] = useState(null)
+
+  const handleUserClick = (userId) => {
+    if (!userId) return
+    setViewingUserId(userId)
+  }
 
   // Validate session on startup — if the stored token is stale, force re-login
   useEffect(() => {
@@ -65,6 +99,15 @@ export default function App() {
       .catch(() => {})
   }, [user?.email])
 
+  // Close the post menu when tapping anywhere outside it — without blocking scroll
+  // NOTE: must be declared before any early returns to satisfy the Rules of Hooks
+  useEffect(() => {
+    if (!showPostMenu) return
+    const close = () => setShowPostMenu(false)
+    const id = setTimeout(() => document.addEventListener('click', close, { once: true }), 0)
+    return () => { clearTimeout(id); document.removeEventListener('click', close) }
+  }, [showPostMenu])
+
   // ── Auth gates ──────────────────────────────────────────────────────────────
   if (!user) {
     return <Login onLogin={u => setUser(u)} />
@@ -80,6 +123,16 @@ export default function App() {
           house: profile.house,
           interests: profile.interests,
           onboarded: true,
+          readinessOverall:    profile.readinessOverall,
+          readinessBelonging:  profile.readinessBelonging,
+          readinessDailyLife:  profile.readinessDailyLife,
+          readinessClassroom:  profile.readinessClassroom,
+          readinessAcademic:   profile.readinessAcademic,
+          readinessProfessors: profile.readinessProfessors,
+          readinessFriendship: profile.readinessFriendship,
+          readinessCulture:    profile.readinessCulture,
+          readinessWellbeing:  profile.readinessWellbeing,
+          readinessCampusHelp: profile.readinessCampusHelp,
         })
       } catch (e) {
         console.error('Failed to save profile to API:', e)
@@ -175,12 +228,12 @@ export default function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'map':     return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} sunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} />
-      case 'post':    return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} sunlightPosts={sunlightPosts} onNewSunlightPost={handleNewSunlightPost} onEditSunlightPost={handleEditSunlightPost} />
-      case 'chat':    return <Chat />
-      case 'profile': return <Profile user={user} onUpdate={handleUpdateUser} userPosts={communityPosts} userSunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} onSignOut={() => { localStorage.removeItem('shine_user'); localStorage.removeItem('shine_session'); setUser(null); setTab('map') }} />
-      case 'hunt':    return <ScavengerHunt user={user} />
-      default:        return <MapHome communityPosts={communityPosts} />
+      case 'map':     return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} sunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} onUserClick={handleUserClick} />
+      case 'post':    return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} sunlightPosts={sunlightPosts} onNewSunlightPost={handleNewSunlightPost} onEditSunlightPost={handleEditSunlightPost} onUserClick={handleUserClick} />
+      case 'chat':    return <Chat onUserClick={handleUserClick} />
+      case 'profile': return <Profile user={user} onUpdate={handleUpdateUser} userPosts={communityPosts} userSunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} onUserClick={handleUserClick} onSignOut={() => { localStorage.removeItem('shine_user'); localStorage.removeItem('shine_session'); setUser(null); setTab('map') }} />
+      case 'hunt':    return <ScavengerHunt user={user} onUserClick={handleUserClick} />
+      default:        return <MapHome communityPosts={communityPosts} onUserClick={handleUserClick} />
     }
   }
 
@@ -193,9 +246,7 @@ export default function App() {
 
       {/* Post sub-menu popup */}
       {showPostMenu && (
-        <>
-          <div onClick={() => setShowPostMenu(false)} style={{ position: 'fixed', inset: 0, zIndex: 110 }} />
-          <div className="slide-up" style={{
+          <div className="slide-up" onClick={e => e.stopPropagation()} style={{
             position: 'fixed', bottom: 76,
             left: 'max(12px, calc(50vw - 203px))',
             right: 'max(12px, calc(50vw - 203px))',
@@ -228,7 +279,6 @@ export default function App() {
               </button>
             ))}
           </div>
-        </>
       )}
 
       <BottomNav active={tab} onChange={handleTabChange} isOnCampus={!!user?.isOnCampus} />
@@ -239,6 +289,22 @@ export default function App() {
           onSubmit={(post) => { handleNewSunlightPost(post); setShowCreate(false) }}
         />
       )}
+
+      {viewingUserId && (
+        <UserProfileSheet
+          userId={viewingUserId}
+          currentUser={user}
+          onClose={() => setViewingUserId(null)}
+        />
+      )}
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppInner />
+    </ErrorBoundary>
   )
 }
