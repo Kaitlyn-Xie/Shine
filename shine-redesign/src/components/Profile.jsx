@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { CloseIcon, PlusIcon, GlobeIcon, CheckIcon } from './Icons'
+import {
+  CloseIcon, PlusIcon, GlobeIcon, CheckIcon, TrophyIcon, StarIcon,
+  BookIcon, LockIcon, EditIcon, SearchIcon, LandmarkIcon, PlaneIcon,
+  ImageIcon, FilmIcon, MessageIcon, MicIcon,
+  ICON_MAP,
+} from './Icons'
 import { TYPE_CONFIG } from '../data'
 import { BADGES } from '../data/missions'
 import { api } from '../lib/api'
@@ -13,6 +18,50 @@ function readHuntData() {
 
 const HUNT_GREEN = '#1B8757'
 const HUNT_LIGHT = '#E8F8F0'
+
+// ── Community Activity Badges ─────────────────────────────────────────────────
+// Points earned per action
+const PTS = { photo: 15, text: 10, tip: 20, question: 10, answer: 25 }
+
+// Badge definitions — fun names with unlock conditions
+const COMMUNITY_BADGES = [
+  // First-post milestones
+  { id: 'first_light',    iconKey: 'sun',      name: 'First Light',       desc: 'Share your first post',           pts: 10,  check: s => s.totalPosts >= 1 },
+  { id: 'snap_happy',     iconKey: 'camera',   name: 'Snap Happy',        desc: 'Post your first photo',           pts: 10,  check: s => s.photoPosts >= 1 },
+  { id: 'wordsmith',      iconKey: 'edit',     name: 'Wordsmith',         desc: 'Write your first text post',      pts: 10,  check: s => s.textPosts >= 1 },
+  // Photography
+  { id: 'gallery_star',   iconKey: 'image',    name: 'Gallery Star',      desc: 'Share 5 photos',                  pts: 25,  check: s => s.photoPosts >= 5 },
+  { id: 'chronicler',     iconKey: 'grid',     name: 'Harvard Chronicler',desc: 'Share 15 photos',                 pts: 50,  check: s => s.photoPosts >= 15 },
+  // Tips
+  { id: 'wise_owl',       iconKey: 'book',     name: 'Wise Owl',          desc: 'Share your first tip',            pts: 15,  check: s => s.tips >= 1 },
+  { id: 'campus_sage',    iconKey: 'compass',  name: 'Campus Sage',       desc: 'Share 5 tips',                    pts: 40,  check: s => s.tips >= 5 },
+  { id: 'life_compass',   iconKey: 'compass',  name: 'Life Compass',      desc: 'Share 10 tips',                   pts: 75,  check: s => s.tips >= 10 },
+  // Questions
+  { id: 'curious_cat',    iconKey: 'search',   name: 'Curious Cat',       desc: 'Ask your first question',         pts: 10,  check: s => s.questions >= 1 },
+  { id: 'the_seeker',     iconKey: 'search',   name: 'The Seeker',        desc: 'Ask 5 questions',                 pts: 30,  check: s => s.questions >= 5 },
+  // Answers
+  { id: 'voice_yard',     iconKey: 'mic',      name: 'Voice of the Yard', desc: 'Answer your first question',      pts: 20,  check: s => s.answers >= 1 },
+  { id: 'convo_starter',  iconKey: 'message',  name: 'Convo Starter',     desc: 'Answer 3 questions',              pts: 40,  check: s => s.answers >= 3 },
+  { id: 'dear_advisor',   iconKey: 'gradcap',  name: 'Dear Advisor',      desc: 'Answer 10 questions',             pts: 80,  check: s => s.answers >= 10 },
+  // Point milestones (no bonus pts, just recognition)
+  { id: 'on_fire',        iconKey: 'zap',      name: 'On Fire',           desc: '50+ community points',            pts: 0,   check: (_, total) => total >= 50 },
+  { id: 'rising_star',    iconKey: 'star',     name: 'Rising Star',       desc: '100+ community points',           pts: 0,   check: (_, total) => total >= 100 },
+  { id: 'shine_diamond',  iconKey: 'diamond',  name: 'Shine Diamond',     desc: '200+ community points',           pts: 0,   check: (_, total) => total >= 200 },
+  { id: 'campus_legend',  iconKey: 'crown',    name: 'Campus Legend',     desc: '400+ community points',           pts: 0,   check: (_, total) => total >= 400 },
+]
+
+function computeCommunityPoints(stats) {
+  return (
+    stats.photoPosts * PTS.photo +
+    stats.textPosts * PTS.text +
+    stats.tips * PTS.tip +
+    stats.questions * PTS.question +
+    stats.answers * PTS.answer
+  )
+}
+
+const COMM_BLUE = '#5599EE'
+const COMM_LIGHT = '#EEF4FF'
 
 const CONCENTRATIONS = [
   'African and African American Studies', 'Anthropology', 'Applied Mathematics',
@@ -42,10 +91,14 @@ const HOUSES = [
 ]
 const YEARS = ['2028', '2027', '2026', '2025']
 const INTERESTS = [
-  '🔬 Research', '⚽ Athletics', '🎵 Music', '🎨 Arts',
-  '💻 Coding', '🍳 Cooking', '✈️ Travel', '📚 Reading',
-  '🎬 Film', '🌐 Languages', '🚀 Entrepreneurship', '🤝 Community Service',
-  '💃 Dance', '🎮 Gaming', '🏛️ Politics', '🌱 Sustainability',
+  'Research', 'Athletics', 'Music', 'Arts',
+  'Coding', 'Cooking', 'Travel', 'Reading',
+  'Film', 'Languages', 'Entrepreneurship', 'Community Service',
+  'Dance', 'Gaming', 'Politics', 'Sustainability',
+  'Photography', 'Hiking', 'Yoga & Wellness', 'Fashion',
+  'Theater', 'Debate', 'Journalism', 'Finance',
+  'Pre-med', 'Architecture', 'Philosophy', 'Biking',
+  'Volunteering', 'Podcasting', 'Public Speaking', 'Sports Fandom',
 ]
 
 const GRAD_COLORS = [
@@ -56,6 +109,97 @@ const GRAD_COLORS = [
   ['#EDD9FF', '#9966EE'],
 ]
 
+// ── Interest Users bottom sheet ───────────────────────────────────────────────
+function InterestUsersSheet({ interest, onClose, onUserClick }) {
+  const [users, setUsers] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    api.getUsersByInterest(interest)
+      .then(data => { setUsers(data.users ?? []); setLoading(false) })
+      .catch(() => { setUsers([]); setLoading(false) })
+  }, [interest])
+
+  const GRAD_COLORS_LOCAL = [
+    ['#FFE8A0', '#FFC94A'], ['#C8F0DC', '#3CB87A'], ['#C6DAFF', '#5599EE'],
+    ['#FFD6DC', '#E8415A'], ['#EDD9FF', '#9966EE'],
+  ]
+
+  function avatarGrad(name) {
+    const code = (name || '').split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+    return GRAD_COLORS_LOCAL[code % GRAD_COLORS_LOCAL.length]
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1600, display: 'flex', flexDirection: 'column' }}>
+      <div onClick={onClose} style={{ flex: 1, background: 'rgba(0,0,0,0.45)' }} />
+      <div style={{
+        background: '#fff', borderRadius: '22px 22px 0 0',
+        boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+        maxHeight: '70vh', display: 'flex', flexDirection: 'column',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+          <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 14px', borderBottom: '1px solid #F0F0F0', flexShrink: 0 }}>
+          <div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: '#1A1A1A' }}>{interest}</div>
+            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
+              {loading ? 'Loading…' : `${users.length} student${users.length !== 1 ? 's' : ''} share this interest`}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: '#F0F0F0', border: 'none', cursor: 'pointer', width: 32, height: 32, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div style={{ overflowY: 'auto', flex: 1, padding: '8px 0 24px' }}>
+          {loading && (
+            <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 14, padding: '32px 0' }}>Loading…</div>
+          )}
+          {!loading && users.length === 0 && (
+            <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 14, padding: '32px 20px', lineHeight: 1.6 }}>
+              No other students have listed <strong>{interest}</strong> as an interest yet.<br />You might be the first!
+            </div>
+          )}
+          {users.map(u => {
+            const [from, to] = avatarGrad(u.name)
+            const ini = (u.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+            return (
+              <button
+                key={u.id}
+                onClick={() => { onUserClick?.(u.id); onClose() }}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                  padding: '12px 20px', background: 'none', border: 'none',
+                  cursor: 'pointer', textAlign: 'left',
+                  borderBottom: '1px solid #F9FAFB',
+                }}
+              >
+                <div style={{
+                  width: 44, height: 44, borderRadius: '50%', flexShrink: 0,
+                  background: `linear-gradient(135deg, ${from}, ${to})`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 17, fontWeight: 900, color: '#5A3A00',
+                }}>
+                  {ini}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: '#1A1A1A' }}>{u.name}</div>
+                  <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
+                    {[u.country, u.year ? `Class of ${u.year}` : null].filter(Boolean).join(' · ')}
+                  </div>
+                </div>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#D1D5DB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Edit Profile bottom sheet ─────────────────────────────────────────────────
 function EditProfileSheet({ user, onClose, onSave }) {
   const [name, setName] = useState(user.name || '')
@@ -64,9 +208,17 @@ function EditProfileSheet({ user, onClose, onSave }) {
   const [concentration, setConcentration] = useState(user.concentration || '')
   const [house, setHouse] = useState(user.house || '')
   const [interests, setInterests] = useState(user.interests || [])
+  const [customInput, setCustomInput] = useState('')
 
   const toggleInterest = (tag) =>
     setInterests(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
+
+  const addCustomInterest = () => {
+    const val = customInput.trim()
+    if (!val || interests.includes(val)) { setCustomInput(''); return }
+    setInterests(prev => [...prev, val])
+    setCustomInput('')
+  }
 
   const handleSave = () => {
     onSave({ name: name.trim(), country: country.trim(), year, concentration, house, interests })
@@ -86,7 +238,7 @@ function EditProfileSheet({ user, onClose, onSave }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '16px 20px 12px', borderBottom: '1px solid var(--border)', flexShrink: 0,
         }}>
-          <span style={{ fontSize: 18, fontWeight: 800 }}>✏️ Edit Profile</span>
+          <span style={{ fontSize: 18, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 6 }}><EditIcon size={16} color="#1A1A1A" /> Edit Profile</span>
           <button onClick={onClose} style={iconBtn}>
             <CloseIcon size={20} color="#4A4A4A" />
           </button>
@@ -168,7 +320,7 @@ function EditProfileSheet({ user, onClose, onSave }) {
           {/* Interests */}
           <div style={{ marginBottom: 24 }}>
             <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Interests</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
               {INTERESTS.map(tag => {
                 const active = interests.includes(tag)
                 return (
@@ -183,6 +335,38 @@ function EditProfileSheet({ user, onClose, onSave }) {
                   </button>
                 )
               })}
+              {interests.filter(t => !INTERESTS.includes(t)).map(custom => (
+                <button key={custom} onClick={() => toggleInterest(custom)} style={{
+                  padding: '7px 14px', borderRadius: 20, fontSize: 13, cursor: 'pointer', fontWeight: 600,
+                  background: 'linear-gradient(135deg, #F8EEFF, #EDD9FF)',
+                  color: '#9933CC', border: '1.5px solid #CC66FF',
+                  display: 'flex', alignItems: 'center', gap: 5,
+                }}>
+                  {custom} <span style={{ fontSize: 15 }}>×</span>
+                </button>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                value={customInput}
+                onChange={e => setCustomInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addCustomInterest()}
+                placeholder="Add your own interest…"
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 20, fontSize: 13,
+                  border: '1.5px dashed #CCCCCC', outline: 'none', background: '#FAFAFA',
+                  color: '#1A1A1A', fontFamily: 'inherit',
+                }}
+              />
+              <button
+                onClick={addCustomInterest}
+                style={{
+                  padding: '8px 14px', borderRadius: 20, fontSize: 13, fontWeight: 700,
+                  background: customInput.trim() ? 'linear-gradient(135deg, #CC66FF, #9933CC)' : '#E0E0E0',
+                  color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0,
+                }}>
+                + Add
+              </button>
             </div>
           </div>
         </div>
@@ -305,8 +489,8 @@ function UserPostCard({ post, onEdit }) {
             {cfg.label.toUpperCase()}
           </span>
         ) : (
-          <span style={{ fontSize: 22 }}>
-            {post.mediaType === 'photo' ? '🖼️' : post.mediaType === 'video' ? '🎬' : '💬'}
+          <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {post.mediaType === 'photo' ? <ImageIcon size={20} color="#9A9A9A" /> : post.mediaType === 'video' ? <FilmIcon size={20} color="#9A9A9A" /> : <MessageIcon size={20} color="#9A9A9A" />}
           </span>
         )}
       </div>
@@ -329,7 +513,7 @@ function UserPostCard({ post, onEdit }) {
             background: '#EEF4FF', color: QC, fontSize: 12, fontWeight: 700, cursor: 'pointer',
           }}
         >
-          ✏️ Edit
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><EditIcon size={12} color={QC} /> Edit</span>
         </button>
       )}
     </div>
@@ -337,11 +521,17 @@ function UserPostCard({ post, onEdit }) {
 }
 
 // ── Main Profile ─────────────────────────────────────────────────────────────
-export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPosts = [], userSunlightPosts = [], onEditSunlightPost }) {
+export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPosts = [], userSunlightPosts = [], onEditSunlightPost, onUserClick }) {
   const [activeTab, setActiveTab] = useState('all')
   const [showEdit, setShowEdit] = useState(false)
+  const [viewingInterest, setViewingInterest] = useState(null)
   const [editingPost, setEditingPost] = useState(null)
   const [huntData, setHuntData] = useState(readHuntData)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searchLoading, setSearchLoading] = useState(false)
+
+  const [activityStats, setActivityStats] = useState({ photoPosts: 0, textPosts: 0, tips: 0, questions: 0, answers: 0, totalPosts: 0 })
 
   // Hidden journal state — private to this user
   const [journal, setJournal] = useState('')
@@ -363,6 +553,11 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
       })
       .catch(() => {})
 
+    // Load community activity stats
+    api.getActivityStats()
+      .then(stats => stats && setActivityStats(stats))
+      .catch(() => {})
+
     // Load hidden journal
     api.getHiddenJournal()
       .then(data => {
@@ -371,6 +566,18 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
       })
       .catch(() => {})
   }, [])
+
+  useEffect(() => {
+    const q = searchQuery.trim()
+    if (!q) { setSearchResults([]); return }
+    setSearchLoading(true)
+    const timer = setTimeout(() => {
+      api.searchUsers(q)
+        .then(r => { setSearchResults(r.users ?? []); setSearchLoading(false) })
+        .catch(() => { setSearchResults([]); setSearchLoading(false) })
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   const toggleOnCampus = () => onUpdate?.({ isOnCampus: !user.isOnCampus })
 
@@ -391,6 +598,11 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
     activeTab === 'community' ? myPosts
     : activeTab === 'sunlight' ? mySunlightPosts
     : allPosts
+
+  // Community badge computation
+  const communityPoints = computeCommunityPoints(activityStats)
+  const earnedCommunityBadges = COMMUNITY_BADGES.filter(b => b.check(activityStats, communityPoints))
+  const lockedCommunityBadges = COMMUNITY_BADGES.filter(b => !b.check(activityStats, communityPoints))
 
   const handleSaveProfile = (updates) => onUpdate?.(updates)
 
@@ -457,20 +669,37 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
               {[user.country, user.year ? `Class of ${user.year}` : '', user.house].filter(Boolean).join(' · ')}
             </div>
             {user.concentration && (
-              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, paddingLeft: 18 }}>
-                📚 {user.concentration}
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4, paddingLeft: 18, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <BookIcon size={12} color="var(--text-secondary)" /> {user.concentration}
               </div>
             )}
             {interestTags.length > 0 && (
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 {interestTags.map(tag => (
-                  <span key={tag} style={{
-                    fontSize: 12, padding: '5px 12px',
-                    background: '#FFFBF0', borderRadius: 20,
-                    border: '1.5px solid var(--yellow)',
-                    fontWeight: 600, color: 'var(--orange)',
-                  }}>{tag}</span>
+                  <button
+                    key={tag}
+                    onClick={() => setViewingInterest(tag)}
+                    style={{
+                      fontSize: 12, padding: '5px 12px',
+                      background: '#FFFBF0', borderRadius: 20,
+                      border: '1.5px solid var(--yellow)',
+                      fontWeight: 600, color: 'var(--orange)',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4,
+                    }}
+                  >
+                    {tag}
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+                  </button>
                 ))}
+                {(user.interests || []).length > 5 && (
+                  <button onClick={() => setShowEdit(true)} style={{
+                    fontSize: 12, padding: '5px 12px', background: '#F5F5F5',
+                    borderRadius: 20, border: '1.5px solid #E0E0E0',
+                    fontWeight: 600, color: '#9CA3AF', cursor: 'pointer',
+                  }}>
+                    +{(user.interests || []).length - 5} more
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -485,8 +714,9 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
             cursor: 'pointer',
           }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: user.isOnCampus ? 'var(--orange)' : '#4A4A4A' }}>
-                {user.isOnCampus ? "🏛️  I'm on campus" : '✈️  Pre-arrival'}
+              <div style={{ fontWeight: 700, fontSize: 14, color: user.isOnCampus ? 'var(--orange)' : '#4A4A4A', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {user.isOnCampus ? <LandmarkIcon size={14} color="var(--orange)" /> : <PlaneIcon size={14} color="#4A4A4A" />}
+                {user.isOnCampus ? "I'm on campus" : 'Pre-arrival'}
               </div>
               <div style={{ fontSize: 12, color: '#AAAAAA', marginTop: 2 }}>
                 {user.isOnCampus ? 'Tap to switch to pre-arrival mode' : 'Tap when you arrive at Harvard'}
@@ -535,19 +765,71 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
               boxShadow: '0 4px 14px rgba(255,154,60,0.3)',
             }}
           >
-            ✏️ Edit Profile
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}><EditIcon size={15} color="#1A1A1A" /> Edit Profile</span>
           </button>
+
+          {/* Find Students */}
+          <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid #F3F4F6' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+              <SearchIcon size={15} color="#1A1A1A" />
+              <span style={{ fontWeight: 800, fontSize: 14, color: '#1A1A1A' }}>Find Students</span>
+            </div>
+            <input
+              type="text"
+              placeholder="Search by name, country, or interests…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{
+                width: '100%', padding: '10px 14px', borderRadius: 12, fontSize: 14,
+                border: '1.5px solid #E5E7EB', outline: 'none', boxSizing: 'border-box',
+                background: '#F9FAFB', color: '#1A1A1A',
+              }}
+            />
+            {searchLoading && (
+              <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, paddingTop: 12 }}>Searching…</div>
+            )}
+            {!searchLoading && searchQuery.trim() && searchResults.length === 0 && (
+              <div style={{ textAlign: 'center', color: '#9CA3AF', fontSize: 13, paddingTop: 12 }}>No students found</div>
+            )}
+            {searchResults.length > 0 && (
+              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column' }}>
+                {searchResults.map(u => (
+                  <button
+                    key={u.id}
+                    onClick={() => onUserClick?.(u.id)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', width: '100%', borderBottom: '1px solid #F3F4F6' }}
+                  >
+                    <div style={{
+                      width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+                      background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 14, fontWeight: 900, color: '#fff',
+                    }}>
+                      {(u.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: '#1A1A1A' }}>{u.name}</div>
+                      <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>
+                        {[u.country, u.year ? `Class of ${u.year}` : ''].filter(Boolean).join(' · ')}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 16, color: '#9CA3AF' }}>›</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Scavenger Hunt Stats */}
       <div style={{ margin: '0 0 10px', background: '#fff', padding: '16px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-          <span style={{ fontSize: 16 }}>🏆</span>
+          <TrophyIcon size={16} color="#1A1A1A" />
           <span style={{ fontWeight: 800, fontSize: 15, color: '#1A1A1A' }}>Scavenger Hunt</span>
           {!user.isOnCampus && (
-            <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#9A9A9A', background: '#F3F4F6', padding: '2px 8px', borderRadius: 8 }}>
-              🔒 Unlocks on arrival
+            <span style={{ marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#9A9A9A', background: '#F3F4F6', padding: '2px 8px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <LockIcon size={9} color="#9A9A9A" /> Unlocks on arrival
             </span>
           )}
         </div>
@@ -592,7 +874,7 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
                 background: HUNT_LIGHT, border: `1.5px solid #B2E8D0`,
                 borderRadius: 20, padding: '5px 12px',
               }}>
-                <span style={{ fontSize: 16 }}>{b.emoji}</span>
+                {(() => { const Ic = ICON_MAP[b.iconKey]; return Ic ? <Ic size={16} color={HUNT_GREEN} /> : null })()}
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 700, color: HUNT_GREEN }}>{b.name}</div>
                   <div style={{ fontSize: 10, color: '#6B7280' }}>+{b.points} pts</div>
@@ -605,7 +887,94 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
         {/* Placeholder badges when none earned */}
         {user.isOnCampus && earnedBadges.length === 0 && huntMissions === 0 && (
           <div style={{ textAlign: 'center', padding: '8px 0 2px', color: '#AAAAAA', fontSize: 12 }}>
-            Complete missions to earn badges 🎖️
+            Complete missions to earn badges
+          </div>
+        )}
+      </div>
+
+      {/* ── Community Activity Badges ── */}
+      <div style={{ margin: '0 0 10px', background: '#fff', padding: '16px 20px' }}>
+        {/* Section header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+          <StarIcon size={16} color="#1A1A1A" />
+          <span style={{ fontWeight: 800, fontSize: 15, color: '#1A1A1A' }}>Community Badges</span>
+          <span style={{
+            marginLeft: 'auto', fontSize: 11, fontWeight: 800, color: '#fff',
+            background: 'linear-gradient(135deg, #5599EE, #3377CC)',
+            padding: '3px 10px', borderRadius: 10,
+          }}>
+            {communityPoints} pts
+          </span>
+        </div>
+
+        {/* Points breakdown bar */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          {[
+            { label: 'Photos', count: activityStats.photoPosts, pts: PTS.photo, color: '#FF9A3C' },
+            { label: 'Tips',   count: activityStats.tips,       pts: PTS.tip,   color: COMM_BLUE },
+            { label: 'Q&A',    count: activityStats.questions + activityStats.answers, pts: null, color: '#1B8757' },
+          ].map(item => (
+            <div key={item.label} style={{
+              flex: 1, background: COMM_LIGHT, borderRadius: 12, padding: '10px 0',
+              textAlign: 'center', border: `1.5px solid #C9DAFF`,
+            }}>
+              <div style={{ fontWeight: 900, fontSize: 19, color: item.color }}>{item.count}</div>
+              <div style={{ fontSize: 10, color: '#6B7280', fontWeight: 600, marginTop: 1 }}>{item.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Earned badges */}
+        {earnedCommunityBadges.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', marginBottom: 8, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
+              Earned · {earnedCommunityBadges.length}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {earnedCommunityBadges.map(b => (
+                <div key={b.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  background: COMM_LIGHT, border: `1.5px solid #C9DAFF`,
+                  borderRadius: 20, padding: '6px 12px',
+                }}>
+                  {(() => { const Ic = ICON_MAP[b.iconKey]; return Ic ? <Ic size={17} color={COMM_BLUE} /> : null })()}
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 800, color: COMM_BLUE, lineHeight: 1.2 }}>{b.name}</div>
+                    {b.pts > 0 && <div style={{ fontSize: 10, color: '#6B7280' }}>+{b.pts} pts</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Next badges to unlock */}
+        {lockedCommunityBadges.length > 0 && (
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#AAAAAA', marginBottom: 8, letterSpacing: '0.4px', textTransform: 'uppercase' }}>
+              Next to unlock
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {lockedCommunityBadges.slice(0, 4).map(b => (
+                <div key={b.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  background: '#F7F7F7', border: `1.5px solid #E5E7EB`,
+                  borderRadius: 20, padding: '5px 11px', opacity: 0.75,
+                }}>
+                  {(() => { const Ic = ICON_MAP[b.iconKey]; return Ic ? <Ic size={15} color="#BBBBBB" /> : null })()}
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', lineHeight: 1.2 }}>{b.name}</div>
+                    <div style={{ fontSize: 10, color: '#BBBBBB' }}>{b.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {earnedCommunityBadges.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '4px 0 2px', color: '#AAAAAA', fontSize: 12 }}>
+            Post, share tips, and answer questions to earn badges!
           </div>
         )}
       </div>
@@ -613,13 +982,14 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
       {/* ── Hidden Journal — only visible to the logged-in user ── */}
       <div style={{ margin: '0 0 10px', background: '#fff', padding: '16px 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-          <span style={{ fontSize: 16 }}>📓</span>
+          <BookIcon size={16} color="#1A1A1A" />
           <span style={{ fontWeight: 800, fontSize: 15, color: '#1A1A1A' }}>My Hidden Journal</span>
           <span style={{
             marginLeft: 'auto', fontSize: 10, fontWeight: 700, color: '#fff',
             background: 'linear-gradient(135deg, #7C3AED, #6D28D9)',
             padding: '2px 8px', borderRadius: 8,
-          }}>🔒 Private</span>
+            display: 'inline-flex', alignItems: 'center', gap: 4,
+          }}><LockIcon size={9} color="#fff" /> Private</span>
         </div>
         <p style={{ fontSize: 12, color: '#6B7280', lineHeight: 1.6, margin: '0 0 12px' }}>
           This section is private to you and used by the scavenger-hunt matcher to better understand your needs, what you're looking to do with friends, how you're feeling, etc.
@@ -686,7 +1056,7 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
       <div style={{ padding: '4px 12px 28px' }}>
         {displayPosts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-secondary)' }}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}>📭</div>
+            <div style={{ marginBottom: 10, opacity: 0.35 }}><ImageIcon size={36} color="var(--text-secondary)" /></div>
             <div style={{ fontSize: 14, fontWeight: 600 }}>No posts yet</div>
             <div style={{ fontSize: 13, marginTop: 4 }}>Your posts will appear here</div>
           </div>
@@ -705,6 +1075,16 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
           </div>
         )}
       </div>
+
+      {/* Interest Users sheet */}
+      {viewingInterest && createPortal(
+        <InterestUsersSheet
+          interest={viewingInterest}
+          onClose={() => setViewingInterest(null)}
+          onUserClick={onUserClick}
+        />,
+        document.body
+      )}
 
       {/* Edit Profile sheet — portal to escape scroll container */}
       {showEdit && createPortal(

@@ -1,8 +1,8 @@
 const getBase = () => {
   if (typeof window === "undefined") return "http://localhost:8080";
-  // Route through the shine-live server which proxies /api/ → API server.
-  // Works regardless of how Replit's proxy handles path prefixes.
-  return `${window.location.origin}/Shine`;
+  // /api/ is routed directly to the API server in both dev and production
+  // by Replit's path-based proxy — no /Shine prefix needed.
+  return window.location.origin;
 };
 
 function session() {
@@ -51,6 +51,7 @@ export const api = {
     request("POST", `/sunlight-posts/${questionId}/answers`, { body, isAnonymous }),
 
   getHuntStats: () => request("GET", "/hunt/stats"),
+  getActivityStats: () => request("GET", "/activity-stats"),
   completeHuntMission: (data) => request("POST", "/hunt/complete", data),
 
   // ── Hidden Journal ────────────────────────────────────────────────────────
@@ -77,4 +78,8 @@ export const api = {
   completeGroupMission: (groupId, data) => request("POST", `/scavenger/groups/${groupId}/complete-mission`, data),
   // Leaderboard
   getLeaderboard: () => request("GET", "/hunt/leaderboard"),
+  // User search & public profiles
+  searchUsers: (q) => request("GET", `/users/search?q=${encodeURIComponent(q)}`),
+  getUserProfile: (userId) => request("GET", `/users/${userId}/profile`),
+  getUsersByInterest: (interest) => request("GET", `/users/by-interest?interest=${encodeURIComponent(interest)}`),
 };

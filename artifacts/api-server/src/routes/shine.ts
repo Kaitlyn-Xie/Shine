@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, desc, and, inArray } from "drizzle-orm";
+import { eq, desc, and, inArray, ilike, or, sql } from "drizzle-orm";
 import { scryptSync, randomBytes, randomUUID } from "crypto";
 import {
   db,
@@ -230,6 +230,9 @@ router.put("/shine/users/me", async (req, res): Promise<void> => {
   const {
     name, country, year, concentration, dorm, house,
     interests, isOnCampus, onboarded,
+    readinessOverall, readinessBelonging, readinessDailyLife,
+    readinessClassroom, readinessAcademic, readinessProfessors,
+    readinessFriendship, readinessCulture, readinessWellbeing, readinessCampusHelp,
   } = req.body;
 
   const updates: Record<string, unknown> = {};
@@ -242,6 +245,16 @@ router.put("/shine/users/me", async (req, res): Promise<void> => {
   if (interests !== undefined) updates.interests = interests;
   if (isOnCampus !== undefined) updates.isOnCampus = isOnCampus;
   if (onboarded !== undefined) updates.onboarded = onboarded;
+  if (readinessOverall    !== undefined) updates.readinessOverall    = Math.min(5, Math.max(1, Number(readinessOverall)));
+  if (readinessBelonging  !== undefined) updates.readinessBelonging  = Math.min(5, Math.max(1, Number(readinessBelonging)));
+  if (readinessDailyLife  !== undefined) updates.readinessDailyLife  = Math.min(5, Math.max(1, Number(readinessDailyLife)));
+  if (readinessClassroom  !== undefined) updates.readinessClassroom  = Math.min(5, Math.max(1, Number(readinessClassroom)));
+  if (readinessAcademic   !== undefined) updates.readinessAcademic   = Math.min(5, Math.max(1, Number(readinessAcademic)));
+  if (readinessProfessors !== undefined) updates.readinessProfessors = Math.min(5, Math.max(1, Number(readinessProfessors)));
+  if (readinessFriendship !== undefined) updates.readinessFriendship = Math.min(5, Math.max(1, Number(readinessFriendship)));
+  if (readinessCulture    !== undefined) updates.readinessCulture    = Math.min(5, Math.max(1, Number(readinessCulture)));
+  if (readinessWellbeing  !== undefined) updates.readinessWellbeing  = Math.min(5, Math.max(1, Number(readinessWellbeing)));
+  if (readinessCampusHelp !== undefined) updates.readinessCampusHelp = Math.min(5, Math.max(1, Number(readinessCampusHelp)));
 
   const [updated] = await db
     .update(shineUsersTable)
@@ -310,9 +323,160 @@ router.post("/shine/feed-posts/:id/like", async (req, res): Promise<void> => {
   res.json(adaptFeedPost(updated));
 });
 
+// ── Weekly Event Auto-Generation ─────────────────────────────────────────────
+
+const EVENT_TEMPLATES: Record<string, { title: string; body: string; venue: string; lat: number; lng: number }> = {
+  Athletics:          { title: "Charles River Run + Coffee", body: "Lace up and join fellow international students for a 3-mile run along the Charles River, followed by coffee at Darwin's. All paces welcome!", venue: "Charles River Esplanade (near JFK St)", lat: 42.3692, lng: -71.1074 },
+  Biking:             { title: "Bike Ride Along the Charles", body: "Meet at the John Weeks Memorial Bridge for a group bike ride along the river. Bike-share bikes available nearby. All levels welcome!", venue: "John Weeks Memorial Bridge", lat: 42.3702, lng: -71.1188 },
+  Music:              { title: "Informal Jam Session", body: "Bring your instrument or come to listen! Join international students for a casual jam session at Paine Music Building. All genres welcome.", venue: "Paine Music Building", lat: 42.3756, lng: -71.1180 },
+  Dance:              { title: "International Dance Social", body: "Learn dances from around the world! Share traditional dances from your home country. No experience needed — everyone welcome!", venue: "Harvard Dance Center", lat: 42.3718, lng: -71.1179 },
+  Coding:             { title: "Build Night at the i-lab", body: "Work on your side project or hang out and code together at Harvard's Innovation Lab. Great for meeting fellow builders. Bring your laptop!", venue: "Harvard i-lab (Batten Hall)", lat: 42.3641, lng: -71.1250 },
+  Cooking:            { title: "International Potluck", body: "Bring a dish from your home country to share! Meet international students over great food and conversation. Taste the world right here in Cambridge.", venue: "Lowell House (Common Room)", lat: 42.3703, lng: -71.1174 },
+  Film:               { title: "Film Screening + Discussion", body: "Screening of an international film followed by discussion. A great chance to explore cinema from different cultures and share your perspective.", venue: "Carpenter Center for the Visual Arts", lat: 42.3756, lng: -71.1148 },
+  Arts:               { title: "Art Walk + Sketch Session", body: "Grab a sketchbook for a walk through the Fogg Museum and Harvard Yard. Sketching encouraged but not required — just come and explore!", venue: "Harvard Art Museums (Fogg)", lat: 42.3743, lng: -71.1166 },
+  Photography:        { title: "Golden Hour Photo Walk", body: "Meet for a golden hour walk through Harvard Yard with your camera or phone. Share tips, capture beautiful moments, and explore together.", venue: "Harvard Yard (Johnston Gate)", lat: 42.3770, lng: -71.1167 },
+  Hiking:             { title: "Fresh Pond Morning Hike", body: "Start your day with a peaceful walk around Fresh Pond Reservation, one of Cambridge's most beautiful natural spaces. 2.25-mile flat loop.", venue: "Fresh Pond Reservation", lat: 42.3872, lng: -71.1495 },
+  "Yoga & Wellness":  { title: "Sunrise Yoga in Harvard Yard", body: "Start the day with a free 45-minute yoga flow in Harvard Yard. Mats provided for the first 20 to arrive. All levels welcome!", venue: "Harvard Yard (Tercentenary Theatre)", lat: 42.3755, lng: -71.1130 },
+  Fashion:            { title: "Thrift & Style Tour", body: "Explore the best vintage and thrift stores around Harvard Square with fellow fashion-forward international students. Good vibes and great finds guaranteed.", venue: "Harvard Square (MBTA entrance)", lat: 42.3733, lng: -71.1190 },
+  Theater:            { title: "Improv Workshop", body: "Try improv comedy with other international students! No experience needed — just energy and a willingness to play. Great for building confidence and connections.", venue: "Loeb Drama Center", lat: 42.3746, lng: -71.1203 },
+  Gaming:             { title: "Chill Gaming Night", body: "Play board games, card games, and video games with other international students. Bring your favorite game from home or just show up!", venue: "Quincy JCR (Junior Common Room)", lat: 42.3686, lng: -71.1138 },
+  Reading:            { title: "Book Club + Hot Chocolate", body: "Pick up any book (fiction or non-fiction, any language!) and join us for a cozy reading session at Lamont Library's café. No assigned reading.", venue: "Lamont Library Café", lat: 42.3741, lng: -71.1161 },
+  Entrepreneurship:   { title: "Startup Pitch Night", body: "Got an idea? Pitch it! Join Harvard international students for a casual pitch evening at the i-lab. Get feedback, find collaborators, meet builders.", venue: "Harvard i-lab (Batten Hall)", lat: 42.3641, lng: -71.1250 },
+  Sustainability:     { title: "Green Campus Walking Tour", body: "Discover Harvard's sustainability initiatives on a guided walk around campus. Learn about green roofs, renewable energy, and student-led environmental projects.", venue: "Harvard Science Center Plaza", lat: 42.3762, lng: -71.1148 },
+  Research:           { title: "Research Skills Workshop", body: "Learn how to navigate Harvard's research databases and library resources. Great for first-year international students getting started with academic research.", venue: "Widener Library, Room B", lat: 42.3742, lng: -71.1171 },
+  Languages:          { title: "Language Exchange Café", body: "Practice your English, French, Mandarin, Spanish — or any language! Meet native speakers from around the world over coffee. All levels welcome.", venue: "Café Algiers, Harvard Square", lat: 42.3735, lng: -71.1203 },
+  Travel:             { title: "Travel Story Swap Evening", body: "Share your most memorable travel story and hear from others. International students from 20+ countries. Great food, great stories, great connections.", venue: "Harvard International Office (Smith Campus Center)", lat: 42.3784, lng: -71.1173 },
+  "Community Service":{ title: "Cambridge Community Volunteer Day", body: "Give back to Cambridge with fellow international students! This week we're helping at the Cambridge Community Center. No experience needed, all welcome.", venue: "Phillips Brooks House (20 DeWolfe St)", lat: 42.3742, lng: -71.1167 },
+  Politics:           { title: "Policy Discussion Roundtable", body: "What's happening in your home country's politics? Bring your perspective to an open roundtable with Harvard international students from 15+ countries.", venue: "Kennedy School (Taubman Building)", lat: 42.3789, lng: -71.1184 },
+  Journalism:         { title: "Story Pitching Workshop", body: "Learn how to pitch a story idea and connect with editors. Hosted for international students interested in journalism, media, and storytelling.", venue: "Nieman Foundation (Walter Lippmann House)", lat: 42.3769, lng: -71.1150 },
+  Finance:            { title: "Finance & Investing Panel", body: "Hear from Harvard students and alumni in finance, banking, and investing. Open Q&A on careers, recruiting, and financial literacy for internationals.", venue: "Harvard Business School (Aldrich Hall)", lat: 42.3675, lng: -71.1257 },
+  Philosophy:         { title: "Philosophy Discussion Circle", body: "What does it mean to be at home when you're far from home? Join a Socratic discussion on identity, belonging, and culture with international students.", venue: "Emerson Hall, Harvard Yard", lat: 42.3759, lng: -71.1163 },
+  Volunteering:       { title: "Cambridge Community Volunteer Day", body: "Give back to Cambridge alongside fellow international students. We'll be working at a local food pantry this week. All welcome!", venue: "Phillips Brooks House", lat: 42.3742, lng: -71.1167 },
+  "Public Speaking":  { title: "Public Speaking Practice Circle", body: "Build confidence speaking in English! Share a 2-minute story about your journey to Harvard. Supportive environment, international students only.", venue: "William James Hall, Harvard", lat: 42.3761, lng: -71.1144 },
+  "Pre-med":          { title: "Pre-med Info Session + Q&A", body: "Navigating the pre-med path as an international student? Join an info session with current students and advisors who understand the challenges of applying from abroad.", venue: "Harvard University Health Services", lat: 42.3748, lng: -71.1188 },
+  Default:            { title: "International Students Meet-Up", body: "An informal meet-up for Harvard international students from all backgrounds. Come as you are, meet new people, and enjoy the company of fellow global Crimson.", venue: "Science Center Plaza, Harvard", lat: 42.3762, lng: -71.1148 },
+};
+
+const EVENT_TIME_SLOTS = [
+  { dayOffset: "friday",   time: "5:00 PM", label: "Fri" },
+  { dayOffset: "saturday", time: "11:00 AM", label: "Sat" },
+  { dayOffset: "sunday",   time: "2:00 PM",  label: "Sun" },
+];
+
+function getThisWeekMonday(): Date {
+  const now = new Date();
+  const day = now.getUTCDay(); // 0=Sun, 1=Mon...6=Sat
+  const diff = day === 0 ? -6 : 1 - day;
+  const mon = new Date(now);
+  mon.setUTCDate(now.getUTCDate() + diff);
+  mon.setUTCHours(0, 0, 0, 0);
+  return mon;
+}
+
+function getUpcomingWeekday(weekdayName: string): Date {
+  const days: Record<string, number> = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
+  const target = days[weekdayName] ?? 5;
+  const now = new Date();
+  const curr = now.getUTCDay();
+  let diff = target - curr;
+  if (diff <= 0) diff += 7;
+  const d = new Date(now);
+  d.setUTCDate(now.getUTCDate() + diff);
+  return d;
+}
+
+function formatEventDate(weekdayName: string): string {
+  const d = getUpcomingWeekday(weekdayName);
+  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  return `${days[d.getUTCDay()]} ${months[d.getUTCMonth()]} ${d.getUTCDate()}`;
+}
+
+let _weeklyEventsGenerating = false;
+
+async function generateWeeklyEventsIfNeeded(): Promise<void> {
+  if (_weeklyEventsGenerating) return;
+  _weeklyEventsGenerating = true;
+  try {
+    const weekStart = getThisWeekMonday();
+
+    // Check how many events already exist this week
+    const existing = await db
+      .select({ id: shineSunlightPostsTable.id })
+      .from(shineSunlightPostsTable)
+      .where(
+        and(
+          eq(shineSunlightPostsTable.type, "event"),
+          sql`${shineSunlightPostsTable.createdAt} >= ${weekStart.toISOString()}`
+        )
+      );
+
+    const needed = 3 - existing.length;
+    if (needed <= 0) return;
+
+    // Get top interests from all users
+    const allUsers = await db
+      .select({ interests: shineUsersTable.interests })
+      .from(shineUsersTable)
+      .where(sql`array_length(${shineUsersTable.interests}, 1) > 0`);
+
+    const freq: Record<string, number> = {};
+    for (const u of allUsers) {
+      for (const interest of (u.interests ?? [])) {
+        freq[interest] = (freq[interest] ?? 0) + 1;
+      }
+    }
+
+    const sorted = Object.entries(freq)
+      .sort((a, b) => b[1] - a[1])
+      .map(([k]) => k);
+
+    // Get already-used interests this week
+    const usedThisWeek = await db
+      .select({ title: shineSunlightPostsTable.title })
+      .from(shineSunlightPostsTable)
+      .where(
+        and(
+          eq(shineSunlightPostsTable.type, "event"),
+          sql`${shineSunlightPostsTable.createdAt} >= ${weekStart.toISOString()}`
+        )
+      );
+    const usedCount = usedThisWeek.length;
+
+    const slots = EVENT_TIME_SLOTS.slice(usedCount, usedCount + needed);
+    const interests = sorted.length >= slots.length ? sorted.slice(usedCount, usedCount + needed) : Array(needed).fill("Default");
+
+    for (let i = 0; i < slots.length; i++) {
+      const interest = interests[i] ?? "Default";
+      const tmpl = EVENT_TEMPLATES[interest] ?? EVENT_TEMPLATES["Default"];
+      const slot = slots[i];
+      const dateLabel = formatEventDate(slot.dayOffset);
+
+      await db.insert(shineSunlightPostsTable).values({
+        userId: 0,
+        username: "SHINE Events",
+        type: "event",
+        title: `${tmpl.title} — ${dateLabel} @ ${slot.time}`,
+        body: `${tmpl.body}\n\nMeet at: ${tmpl.venue}\nWhen: ${dateLabel} @ ${slot.time}`,
+        locationLat: tmpl.lat,
+        locationLng: tmpl.lng,
+        locationLabel: tmpl.venue,
+        isAnonymous: false,
+      });
+    }
+  } catch (_err) {
+    // silently fail — events are nice-to-have
+  } finally {
+    _weeklyEventsGenerating = false;
+  }
+}
+
 // ── Sunlight Posts ────────────────────────────────────────────────────────────
 
 router.get("/shine/sunlight-posts", async (req, res): Promise<void> => {
+  // Fire-and-forget weekly event generation (does not block the response)
+  generateWeeklyEventsIfNeeded().catch(() => {});
+
   const posts = await db
     .select()
     .from(shineSunlightPostsTable)
@@ -501,33 +665,65 @@ router.get("/shine/hunt/stats", async (req, res): Promise<void> => {
   });
 });
 
+router.get("/shine/activity-stats", async (req, res): Promise<void> => {
+  const tok = getSessionId(req);
+  if (!tok) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const user = await getShineUser(tok);
+  if (!user) { res.status(401).json({ error: "User not found" }); return; }
+
+  const [feedPosts, sunlightPosts, answers] = await Promise.all([
+    db.select().from(shineFeedPostsTable).where(eq(shineFeedPostsTable.userId, user.id)),
+    db.select().from(shineSunlightPostsTable).where(eq(shineSunlightPostsTable.userId, user.id)),
+    db.select().from(shineQuestionAnswersTable).where(eq(shineQuestionAnswersTable.userId, user.id)),
+  ]);
+
+  const photoPosts = feedPosts.filter(p => p.mediaType === 'photo').length;
+  const textPosts = feedPosts.filter(p => p.mediaType === 'text' || (!p.mediaType && !p.img)).length;
+  const tips = sunlightPosts.filter(p => p.type === 'tip').length;
+  const questions = sunlightPosts.filter(p => p.type === 'question').length;
+  const answersCount = answers.length;
+
+  res.json({ photoPosts, textPosts, tips, questions, answers: answersCount, totalPosts: feedPosts.length });
+});
+
 router.post("/shine/hunt/complete", async (req, res): Promise<void> => {
   const tok = getSessionId(req);
   if (!tok) { res.status(401).json({ error: "Not authenticated" }); return; }
   const user = await getShineUser(tok);
   if (!user) { res.status(401).json({ error: "User not found" }); return; }
 
-  const { missionId, missionTitle, ptsTotal, photoUrl, shareToFeed } = req.body;
-  if (!missionId) {
-    res.status(400).json({ error: "missionId is required" });
-    return;
-  }
+  const { missionId, missionTitle, missionDesc, ptsTotal, photoUrl, shareToFeed, taggedUserIds = [] } = req.body;
+  if (!missionId) { res.status(400).json({ error: "missionId is required" }); return; }
 
+  const groupSize = (Array.isArray(taggedUserIds) ? taggedUserIds.length : 0) + 1;
+
+  // Prevent duplicate completion
   const existing = await db
     .select()
     .from(shineHuntCompletionsTable)
-    .where(
-      and(
-        eq(shineHuntCompletionsTable.userId, user.id),
-        eq(shineHuntCompletionsTable.missionId, missionId),
-      ),
-    );
+    .where(and(eq(shineHuntCompletionsTable.userId, user.id), eq(shineHuntCompletionsTable.missionId, missionId)));
+  if (existing.length > 0) { res.status(409).json({ error: "Mission already completed" }); return; }
 
-  if (existing.length > 0) {
-    res.status(409).json({ error: "Mission already completed" });
-    return;
+  // AI photo verification (only when a photo is provided)
+  let aiVerified: boolean | null = null;
+  let aiNote = "";
+  if (photoUrl && missionDesc) {
+    const verification = await verifyMissionPhoto(
+      { title: missionTitle ?? missionId, desc: missionDesc },
+      groupSize,
+      photoUrl,
+    );
+    aiVerified = verification.pass;
+    aiNote = verification.note;
+    if (!verification.pass) {
+      res.status(422).json({ error: "Photo not accepted", reason: verification.note });
+      return;
+    }
   }
 
+  const taggedIdsStr = taggedUserIds.length ? (taggedUserIds as number[]).join(",") : null;
+
+  // Insert completion for the submitter
   const [completion] = await db
     .insert(shineHuntCompletionsTable)
     .values({
@@ -535,8 +731,12 @@ router.post("/shine/hunt/complete", async (req, res): Promise<void> => {
       missionId,
       missionTitle: missionTitle ?? missionId,
       ptsTotal: ptsTotal ?? 0,
+      groupSize,
+      taggedUserIds: taggedIdsStr,
       photoUrl: photoUrl ?? null,
       shareToFeed: shareToFeed ?? false,
+      aiVerified,
+      aiVerificationNote: aiNote || null,
     })
     .returning();
 
@@ -551,6 +751,40 @@ router.post("/shine/hunt/complete", async (req, res): Promise<void> => {
     });
   }
 
+  // Award points to each tagged friend (skip if already completed)
+  const taggedResults: { id: number; name: string; alreadyDone: boolean }[] = [];
+  if (taggedUserIds.length) {
+    const taggedUsers = await db
+      .select({ id: shineUsersTable.id, name: shineUsersTable.name })
+      .from(shineUsersTable)
+      .where(inArray(shineUsersTable.id, taggedUserIds as number[]));
+
+    for (const tagged of taggedUsers) {
+      const alreadyDone = await db
+        .select({ id: shineHuntCompletionsTable.id })
+        .from(shineHuntCompletionsTable)
+        .where(and(eq(shineHuntCompletionsTable.userId, tagged.id), eq(shineHuntCompletionsTable.missionId, missionId)));
+
+      if (alreadyDone.length === 0) {
+        await db.insert(shineHuntCompletionsTable).values({
+          userId: tagged.id,
+          missionId,
+          missionTitle: missionTitle ?? missionId,
+          ptsTotal: ptsTotal ?? 0,
+          groupSize,
+          taggedUserIds: taggedIdsStr,
+          photoUrl: photoUrl ?? null,
+          shareToFeed: false,
+          aiVerified,
+          aiVerificationNote: aiNote || null,
+        });
+        taggedResults.push({ id: tagged.id, name: tagged.name, alreadyDone: false });
+      } else {
+        taggedResults.push({ id: tagged.id, name: tagged.name, alreadyDone: true });
+      }
+    }
+  }
+
   res.status(201).json({
     id: completion.id,
     missionId: completion.missionId,
@@ -561,6 +795,10 @@ router.post("/shine/hunt/complete", async (req, res): Promise<void> => {
     shareToFeed: completion.shareToFeed,
     time: "Just now",
     createdAt: completion.createdAt.toISOString(),
+    groupSize,
+    taggedUsers: taggedResults,
+    aiVerified,
+    aiNote,
   });
 });
 
@@ -604,6 +842,108 @@ router.get("/shine/hunt/leaderboard", async (req, res): Promise<void> => {
 // ── Hidden Journal ────────────────────────────────────────────────────────────
 
 // GET own hidden journal — only accessible by the authenticated user themselves
+// ── Public User Search & Profile ──────────────────────────────────────────────
+
+// GET /shine/users/search?q=name — search users by name, country, or interests (authenticated)
+router.get("/shine/users/search", async (req, res): Promise<void> => {
+  const sessionToken = getSessionId(req);
+  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const user = await getShineUser(sessionToken);
+  if (!user) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const q = String(req.query.q ?? "").trim();
+  if (!q) { res.json({ users: [] }); return; }
+
+  const results = await db
+    .select({ id: shineUsersTable.id, name: shineUsersTable.name, country: shineUsersTable.country, year: shineUsersTable.year, concentration: shineUsersTable.concentration, dorm: shineUsersTable.dorm })
+    .from(shineUsersTable)
+    .where(or(
+      ilike(shineUsersTable.name, `%${q}%`),
+      ilike(shineUsersTable.country, `%${q}%`),
+      sql`array_to_string(${shineUsersTable.interests}, ' ') ilike ${'%' + q + '%'}`,
+    ))
+    .limit(20);
+
+  res.json({ users: results.filter(r => r.id !== user.id) }); // exclude self, wrap in { users }
+});
+
+// GET /shine/users/by-interest?interest=Music — users who share a specific interest
+router.get("/shine/users/by-interest", async (req, res): Promise<void> => {
+  const sessionToken = getSessionId(req);
+  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const viewer = await getShineUser(sessionToken);
+  if (!viewer) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const interest = String(req.query.interest ?? "").trim();
+  if (!interest) { res.json({ users: [] }); return; }
+
+  const results = await db
+    .select({
+      id: shineUsersTable.id,
+      name: shineUsersTable.name,
+      country: shineUsersTable.country,
+      year: shineUsersTable.year,
+      concentration: shineUsersTable.concentration,
+    })
+    .from(shineUsersTable)
+    .where(sql`${shineUsersTable.interests} @> ARRAY[${interest}]::text[]`)
+    .limit(50);
+
+  res.json({ users: results.filter(u => u.id !== viewer.id) });
+});
+
+// GET /shine/users/:userId/profile — public profile (no hidden journal, no opt-in status)
+router.get("/shine/users/:userId/profile", async (req, res): Promise<void> => {
+  const sessionToken = getSessionId(req);
+  if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
+  const viewer = await getShineUser(sessionToken);
+  if (!viewer) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const targetId = parseInt(req.params.userId, 10);
+  if (isNaN(targetId)) { res.status(400).json({ error: "Invalid user id" }); return; }
+
+  const [target] = await db.select().from(shineUsersTable).where(eq(shineUsersTable.id, targetId));
+  if (!target) { res.status(404).json({ error: "User not found" }); return; }
+
+  // Hunt stats
+  const completions = await db
+    .select()
+    .from(shineHuntCompletionsTable)
+    .where(eq(shineHuntCompletionsTable.userId, targetId));
+
+  const totalPts = completions.reduce((s, c) => s + c.ptsTotal, 0);
+  const missions = completions.length;
+
+  // Recent feed posts (last 5, public)
+  const posts = await db
+    .select()
+    .from(shineFeedPostsTable)
+    .where(eq(shineFeedPostsTable.userId, targetId))
+    .orderBy(desc(shineFeedPostsTable.createdAt))
+    .limit(5);
+
+  const publicProfile = {
+    id: target.id,
+    name: target.name,
+    country: target.country ?? null,
+    year: target.year ?? null,
+    concentration: target.concentration ?? null,
+    house: target.house ?? null,
+    interests: target.interests ?? [],
+    createdAt: target.createdAt,
+    huntStats: { totalPts, missions },
+    recentPosts: posts.map(p => ({
+      id: p.id,
+      text: p.text ?? null,
+      img: p.img ?? null,
+      isHunt: p.isHunt ?? false,
+      createdAt: p.createdAt,
+    })),
+  };
+
+  res.json(publicProfile);
+});
+
 router.get("/shine/profile/hidden-journal", async (req, res): Promise<void> => {
   const sessionToken = getSessionId(req);
   if (!sessionToken) { res.status(401).json({ error: "Unauthorized" }); return; }
@@ -1050,6 +1390,52 @@ async function callOpenAI(prompt: string): Promise<string> {
   });
   const data = (await resp.json()) as any;
   return data?.choices?.[0]?.message?.content ?? "";
+}
+
+async function callOpenAIVision(systemPrompt: string, userText: string, imageDataUrl: string): Promise<string> {
+  const baseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL ?? "https://api.openai.com/v1";
+  const apiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OpenAI API key not configured");
+
+  const resp = await fetch(`${baseUrl}/chat/completions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "gpt-5-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: userText },
+            { type: "image_url", image_url: { url: imageDataUrl, detail: "low" } },
+          ],
+        },
+      ],
+      max_tokens: 300,
+      temperature: 0.1,
+    }),
+  });
+  const data = (await resp.json()) as any;
+  return data?.choices?.[0]?.message?.content ?? "";
+}
+
+async function verifyMissionPhoto(
+  mission: { title: string; desc: string },
+  claimedGroupSize: number,
+  photoDataUrl: string,
+): Promise<{ pass: boolean; note: string }> {
+  const system = `You are verifying scavenger hunt photos for Harvard College international students. Be encouraging and lenient — if there is reasonable doubt, approve the photo. Respond ONLY with valid JSON: {"pass": true|false, "note": "one sentence explanation"}`;
+  const groupText = claimedGroupSize === 1 ? "1 person (solo)" : `${claimedGroupSize} people`;
+  const user = `Mission: "${mission.title}"\nDescription: ${mission.desc}\nClaimed group size: ${groupText}\n\nCheck:\n1. Does the photo plausibly show the location or activity described?\n2. Are approximately ${groupText} visible? (Be lenient — partial views count, solo missions just need one person)\n\nOnly fail if the photo is completely unrelated to the mission or shows no people when group is required.`;
+  try {
+    const raw = await callOpenAIVision(system, user, photoDataUrl);
+    const cleaned = raw.trim().replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    return { pass: !!parsed.pass, note: String(parsed.note ?? "") };
+  } catch {
+    return { pass: true, note: "Auto-approved (verification unavailable)" };
+  }
 }
 
 function tokenize(text: string): Set<string> {

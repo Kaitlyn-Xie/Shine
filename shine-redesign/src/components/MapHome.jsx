@@ -69,6 +69,21 @@ function MapClickHandler({ onMapClick }) {
   return null
 }
 
+function createEventPinIcon(selected = false) {
+  const s = selected ? 46 : 38
+  return L.divIcon({
+    html: `<div style="display:flex;flex-direction:column;align-items:center;">
+      <div style="width:${s}px;height:${s}px;border-radius:12px;background:linear-gradient(135deg,#FF6EB4,#E84393);border:3px solid #fff;box-shadow:0 3px 14px rgba(232,67,147,${selected ? '0.7' : '0.4'});display:flex;align-items:center;justify-content:center;transform:${selected ? 'scale(1.1)' : 'scale(1)'};transition:all 0.2s;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="${selected ? 22 : 18}" height="${selected ? 22 : 18}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #E84393;margin-top:-1px;"></div>
+    </div>`,
+    className: '',
+    iconSize: [s, s + 9],
+    iconAnchor: [s / 2, s + 9],
+  })
+}
+
 function createHuntPinIcon(selected = false) {
   const s = selected ? 46 : 38
   return L.divIcon({
@@ -181,7 +196,9 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
           <Marker
             key={item.id}
             position={[item.location.lat, item.location.lng]}
-            icon={createPinIcon(item.type, selected?.id === item.id)}
+            icon={item.type === 'event'
+              ? createEventPinIcon(selected?.id === item.id)
+              : createPinIcon(item.type, selected?.id === item.id)}
             eventHandlers={{ click: (e) => handlePinClick(item, e) }}
           />
         ))}
