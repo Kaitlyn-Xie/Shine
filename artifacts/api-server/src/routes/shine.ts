@@ -308,6 +308,66 @@ router.post("/shine/feed-posts", async (req, res): Promise<void> => {
   res.status(201).json(adaptFeedPost(post));
 });
 
+router.put("/shine/feed-posts/:id", async (req, res): Promise<void> => {
+  const tok = getSessionId(req);
+  if (!tok) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const user = await getShineUser(tok);
+  if (!user) { res.status(401).json({ error: "User not found" }); return; }
+
+  const id = parseInt(req.params.id as string, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid post id" }); return; }
+
+  const [existing] = await db
+    .select()
+    .from(shineFeedPostsTable)
+    .where(eq(shineFeedPostsTable.id, id))
+    .limit(1);
+
+  if (!existing) { res.status(404).json({ error: "Post not found" }); return; }
+  if (existing.userId !== user.id) { res.status(403).json({ error: "Not your post" }); return; }
+
+  const { text, img, mediaType, textContent, gradientIdx, locationName, locationLat, locationLng } = req.body;
+
+  const [updated] = await db
+    .update(shineFeedPostsTable)
+    .set({
+      text: text ?? existing.text,
+      img: img !== undefined ? img : existing.img,
+      mediaType: mediaType ?? existing.mediaType,
+      textContent: textContent !== undefined ? textContent : existing.textContent,
+      gradientIdx: gradientIdx !== undefined ? gradientIdx : existing.gradientIdx,
+      locationName: locationName !== undefined ? locationName : existing.locationName,
+      locationLat: locationLat !== undefined ? locationLat : existing.locationLat,
+      locationLng: locationLng !== undefined ? locationLng : existing.locationLng,
+    })
+    .where(eq(shineFeedPostsTable.id, id))
+    .returning();
+
+  res.json(adaptFeedPost(updated));
+});
+
+router.delete("/shine/feed-posts/:id", async (req, res): Promise<void> => {
+  const tok = getSessionId(req);
+  if (!tok) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const user = await getShineUser(tok);
+  if (!user) { res.status(401).json({ error: "User not found" }); return; }
+
+  const id = parseInt(req.params.id as string, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid post id" }); return; }
+
+  const [existing] = await db
+    .select()
+    .from(shineFeedPostsTable)
+    .where(eq(shineFeedPostsTable.id, id))
+    .limit(1);
+
+  if (!existing) { res.status(404).json({ error: "Post not found" }); return; }
+  if (existing.userId !== user.id) { res.status(403).json({ error: "Not your post" }); return; }
+
+  await db.delete(shineFeedPostsTable).where(eq(shineFeedPostsTable.id, id));
+  res.json({ ok: true });
+});
+
 router.post("/shine/feed-posts/:id/like", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string, 10);
   const [post] = await db
@@ -548,6 +608,28 @@ router.put("/shine/sunlight-posts/:id", async (req, res): Promise<void> => {
     .returning();
 
   res.json(adaptSunlightPost(updated));
+});
+
+router.delete("/shine/sunlight-posts/:id", async (req, res): Promise<void> => {
+  const tok = getSessionId(req);
+  if (!tok) { res.status(401).json({ error: "Not authenticated" }); return; }
+  const user = await getShineUser(tok);
+  if (!user) { res.status(401).json({ error: "User not found" }); return; }
+
+  const id = parseInt(req.params.id as string, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid post id" }); return; }
+
+  const [existing] = await db
+    .select()
+    .from(shineSunlightPostsTable)
+    .where(eq(shineSunlightPostsTable.id, id))
+    .limit(1);
+
+  if (!existing) { res.status(404).json({ error: "Post not found" }); return; }
+  if (existing.userId !== user.id) { res.status(403).json({ error: "Not your post" }); return; }
+
+  await db.delete(shineSunlightPostsTable).where(eq(shineSunlightPostsTable.id, id));
+  res.json({ ok: true });
 });
 
 router.post(

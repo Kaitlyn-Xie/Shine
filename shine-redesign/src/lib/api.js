@@ -40,9 +40,13 @@ export const api = {
   createFeedPost: (post) => request("POST", "/feed-posts", post),
   likeFeedPost: (id) => request("POST", `/feed-posts/${id}/like`),
 
+  updateFeedPost: (id, data) => request("PUT", `/feed-posts/${id}`, data),
+  deleteFeedPost: (id) => request("DELETE", `/feed-posts/${id}`),
+
   getSunlightPosts: () => request("GET", "/sunlight-posts"),
   createSunlightPost: (post) => request("POST", "/sunlight-posts", post),
   updateSunlightPost: (id, data) => request("PUT", `/sunlight-posts/${id}`, data),
+  deleteSunlightPost: (id) => request("DELETE", `/sunlight-posts/${id}`),
   likeSunlightPost: (id) => request("POST", `/sunlight-posts/${id}/like`),
 
   getQuestionAnswers: (questionId) =>

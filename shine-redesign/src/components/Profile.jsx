@@ -394,20 +394,27 @@ function EditProfileSheet({ user, onClose, onSave }) {
 // ── Edit post sheet (for question posts on profile) ──────────────────────────
 const QC = '#5599EE'
 
-function ProfileEditSheet({ post, onClose, onSave }) {
+function ProfileEditSheet({ post, onClose, onSave, onDelete }) {
   const [title, setTitle] = useState(post.title || '')
   const [body, setBody] = useState(post.body || '')
   const [anon, setAnon] = useState(post.isAnonymous || false)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const canSave = title.trim().length > 2
 
   const handleSave = async () => {
-    if (!canSave || saving) return
+    if (!canSave || saving || deleting) return
     setSaving(true)
     setSaveError(null)
     try { await onSave({ title: title.trim(), body: body.trim(), isAnonymous: anon }) }
     catch (e) { setSaveError(e.message || 'Could not save. Please try again.'); setSaving(false) }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this post? This cannot be undone.')) return
+    setDeleting(true)
+    try { await onDelete() } catch { setDeleting(false) }
   }
 
   return (
@@ -457,16 +464,29 @@ function ProfileEditSheet({ post, onClose, onSave }) {
           )}
           <button
             onClick={handleSave}
-            disabled={!canSave || saving}
+            disabled={!canSave || saving || deleting}
             style={{
-              width: '100%', padding: 14, border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700,
-              cursor: canSave && !saving ? 'pointer' : 'default',
-              background: canSave && !saving ? `linear-gradient(135deg, ${QC}, #3377CC)` : 'var(--border)',
-              color: canSave && !saving ? '#fff' : '#AAAAAA',
+              width: '100%', padding: 14, border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700, marginBottom: 10,
+              cursor: canSave && !saving && !deleting ? 'pointer' : 'default',
+              background: canSave && !saving && !deleting ? `linear-gradient(135deg, ${QC}, #3377CC)` : 'var(--border)',
+              color: canSave && !saving && !deleting ? '#fff' : '#AAAAAA',
             }}
           >
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
+          {onDelete && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting || saving}
+              style={{
+                width: '100%', padding: 12, border: '1.5px solid #FCA5A5', borderRadius: 14, fontSize: 14, fontWeight: 700,
+                cursor: deleting || saving ? 'default' : 'pointer',
+                background: '#fff', color: '#DC2626',
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete Post'}
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -528,7 +548,7 @@ function UserPostCard({ post, onEdit }) {
 }
 
 // ── Main Profile ─────────────────────────────────────────────────────────────
-export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPosts = [], userSunlightPosts = [], onEditSunlightPost, onUserClick }) {
+export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPosts = [], userSunlightPosts = [], onEditSunlightPost, onDeleteSunlightPost, onUserClick }) {
   const [activeTab, setActiveTab] = useState('all')
   const [showEdit, setShowEdit] = useState(false)
   const [viewingInterest, setViewingInterest] = useState(null)
@@ -632,6 +652,13 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
     if (!editingPost) return
     const updated = await api.updateSunlightPost(editingPost.dbId, updates)
     onEditSunlightPost?.(updated || { ...editingPost, ...updates })
+    setEditingPost(null)
+  }
+
+  const handleDeletePost = async () => {
+    if (!editingPost?.dbId) return
+    await api.deleteSunlightPost(editingPost.dbId)
+    onDeleteSunlightPost?.(editingPost.id)
     setEditingPost(null)
   }
 
@@ -1105,6 +1132,7 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
           post={editingPost}
           onClose={() => setEditingPost(null)}
           onSave={handleSaveEdit}
+          onDelete={handleDeletePost}
         />,
         document.body
       )}

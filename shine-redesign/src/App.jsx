@@ -213,7 +213,9 @@ function AppInner() {
   }
 
   const handleEditPost = (updated) => setCommunityPosts(prev => prev.map(p => p.id === updated.id ? updated : p))
+  const handleDeletePost = (id) => setCommunityPosts(prev => prev.filter(p => p.id !== id))
   const handleEditSunlightPost = (updated) => setSunlightPosts(prev => prev.map(p => p.id === updated.id ? updated : p))
+  const handleDeleteSunlightPost = (id) => setSunlightPosts(prev => prev.filter(p => p.id !== id))
 
   const handleUpdateUser = async (updates) => {
     const updated = { ...user, ...updates }
@@ -229,9 +231,9 @@ function AppInner() {
   const renderScreen = () => {
     switch (tab) {
       case 'map':     return <MapHome onSunlight={() => setShowCreate(true)} communityPosts={communityPosts} sunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} onUserClick={handleUserClick} />
-      case 'post':    return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} user={user} sunlightPosts={sunlightPosts} onNewSunlightPost={handleNewSunlightPost} onEditSunlightPost={handleEditSunlightPost} onUserClick={handleUserClick} />
+      case 'post':    return <PostFeed view={postView} onShowFAQ={() => selectPostView('faq')} userPosts={communityPosts} onNewPost={handleNewPost} onEditPost={handleEditPost} onDeletePost={handleDeletePost} user={user} sunlightPosts={sunlightPosts} onNewSunlightPost={handleNewSunlightPost} onEditSunlightPost={handleEditSunlightPost} onDeleteSunlightPost={handleDeleteSunlightPost} onUserClick={handleUserClick} />
       case 'chat':    return <Chat onUserClick={handleUserClick} />
-      case 'profile': return <Profile user={user} onUpdate={handleUpdateUser} userPosts={communityPosts} userSunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} onUserClick={handleUserClick} onSignOut={() => { localStorage.removeItem('shine_user'); localStorage.removeItem('shine_session'); setUser(null); setTab('map') }} />
+      case 'profile': return <Profile user={user} onUpdate={handleUpdateUser} userPosts={communityPosts} userSunlightPosts={sunlightPosts} onEditSunlightPost={handleEditSunlightPost} onDeleteSunlightPost={handleDeleteSunlightPost} onUserClick={handleUserClick} onSignOut={() => { localStorage.removeItem('shine_user'); localStorage.removeItem('shine_session'); setUser(null); setTab('map') }} />
       case 'hunt':    return <ScavengerHunt user={user} onUserClick={handleUserClick} />
       default:        return <MapHome communityPosts={communityPosts} onUserClick={handleUserClick} />
     }

@@ -6,7 +6,8 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import {
   SearchIcon, ChevronDownIcon, ThumbsUpIcon,
-  MessageIcon, PinIcon, HeartIcon, Avatar, UserIcon, CloseIcon
+  MessageIcon, PinIcon, HeartIcon, Avatar, UserIcon, CloseIcon,
+  EditIcon, CameraIcon, MapIcon, ZapIcon, UsersIcon,
 } from './Icons'
 
 // ── Static data ──────────────────────────────────────────────────────────────
@@ -27,23 +28,23 @@ const INIT_COMMUNITY_QS = [
 ]
 
 const INIT_POSTS = [
-  { id: 1, username: 'Mei Lin',  initials: 'ML', avatarBg: 'linear-gradient(135deg, #FFD6B0, #FF9A3C)', img: 'https://picsum.photos/seed/harvard1/400/320', imgH: 200, text: 'Just arrived at Harvard! The campus is absolutely beautiful.', likes: 42 },
-  { id: 2, username: 'Lucas M.', initials: 'LM', avatarBg: 'linear-gradient(135deg, #B8FFD0, #3CB87A)', img: 'https://picsum.photos/seed/coffee2/400/420',  imgH: 260, text: 'Best coffee on campus is at the Science Center. Trust me.', likes: 87 },
-  { id: 3, username: 'Priya S.', initials: 'PS', avatarBg: 'linear-gradient(135deg, #B8D8FF, #5599EE)', img: 'https://picsum.photos/seed/student3/400/290', imgH: 180, text: 'Got my student ID and bank account sorted! DM me if you need help.', likes: 134 },
-  { id: 4, username: 'Ji-ho P.', initials: 'JP', avatarBg: 'linear-gradient(135deg, #F0C8FF, #CC66FF)', img: 'https://picsum.photos/seed/campus4/400/370', imgH: 230, text: 'Harvard Yard at sunrise — found the perfect quiet spot.', likes: 56 },
-  { id: 5, username: 'Omar K.',  initials: 'OK', avatarBg: 'linear-gradient(135deg, #FFE0B0, #FF8C00)', img: 'https://picsum.photos/seed/yard5/400/340',   imgH: 210, text: 'Harvard Yard in the morning light is something else entirely.', likes: 203 },
-  { id: 6, username: 'Sofia R.', initials: 'SR', avatarBg: 'linear-gradient(135deg, #FFB8C8, #EE4466)', img: 'https://picsum.photos/seed/group6/400/270',  imgH: 170, text: 'Found the European Students group — so nice to meet everyone!', likes: 78 },
+  { id: 'demo-1', username: 'Mei Lin',  initials: 'ML', avatarBg: 'linear-gradient(135deg, #FFD6B0, #FF9A3C)', img: 'https://picsum.photos/seed/harvard1/400/320', imgH: 200, text: 'Just arrived at Harvard! The campus is absolutely beautiful.', likes: 42 },
+  { id: 'demo-2', username: 'Lucas M.', initials: 'LM', avatarBg: 'linear-gradient(135deg, #B8FFD0, #3CB87A)', img: 'https://picsum.photos/seed/coffee2/400/420',  imgH: 260, text: 'Best coffee on campus is at the Science Center. Trust me.', likes: 87 },
+  { id: 'demo-3', username: 'Priya S.', initials: 'PS', avatarBg: 'linear-gradient(135deg, #B8D8FF, #5599EE)', img: 'https://picsum.photos/seed/student3/400/290', imgH: 180, text: 'Got my student ID and bank account sorted! DM me if you need help.', likes: 134 },
+  { id: 'demo-4', username: 'Ji-ho P.', initials: 'JP', avatarBg: 'linear-gradient(135deg, #F0C8FF, #CC66FF)', img: 'https://picsum.photos/seed/campus4/400/370', imgH: 230, text: 'Harvard Yard at sunrise — found the perfect quiet spot.', likes: 56 },
+  { id: 'demo-5', username: 'Omar K.',  initials: 'OK', avatarBg: 'linear-gradient(135deg, #FFE0B0, #FF8C00)', img: 'https://picsum.photos/seed/yard5/400/340',   imgH: 210, text: 'Harvard Yard in the morning light is something else entirely.', likes: 203 },
+  { id: 'demo-6', username: 'Sofia R.', initials: 'SR', avatarBg: 'linear-gradient(135deg, #FFB8C8, #EE4466)', img: 'https://picsum.photos/seed/group6/400/270',  imgH: 170, text: 'Found the European Students group — so nice to meet everyone!', likes: 78 },
 ]
 
 // ── Root ─────────────────────────────────────────────────────────────────────
 
-export default function PostFeed({ view = 'feed', onShowFAQ, userPosts = [], onNewPost, user = {}, sunlightPosts = [], onNewSunlightPost, onEditSunlightPost }) {
+export default function PostFeed({ view = 'feed', onShowFAQ, userPosts = [], onNewPost, onEditPost, onDeletePost, user = {}, sunlightPosts = [], onNewSunlightPost, onEditSunlightPost, onDeleteSunlightPost, onUserClick }) {
   const questionPosts = sunlightPosts.filter(p => p.type === 'question')
   return (
     <div className="fade-in">
       {view === 'faq'  && <FAQView />}
-      {view === 'cq'   && <CommunityQView onShowFAQ={onShowFAQ} questionPosts={questionPosts} onNewQuestion={onNewSunlightPost} onEditSunlightPost={onEditSunlightPost} user={user} />}
-      {view === 'feed' && <FeedView userPosts={userPosts} onNewPost={onNewPost} user={user} />}
+      {view === 'cq'   && <CommunityQView onShowFAQ={onShowFAQ} questionPosts={questionPosts} onNewQuestion={onNewSunlightPost} onEditSunlightPost={onEditSunlightPost} onDeleteSunlightPost={onDeleteSunlightPost} user={user} onUserClick={onUserClick} />}
+      {view === 'feed' && <FeedView userPosts={userPosts} onNewPost={onNewPost} onEditPost={onEditPost} onDeletePost={onDeletePost} user={user} onUserClick={onUserClick} />}
     </div>
   )
 }
@@ -169,12 +170,12 @@ function AskQuestionSheet({ onClose, onSubmit }) {
 
           {/* Location picker */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#4A4A4A', marginBottom: 8 }}>
-              📍 Tag a location <span style={{ fontWeight: 400, color: '#AAAAAA' }}>(optional — shows on map)</span>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#4A4A4A', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 5 }}>
+              <PinIcon size={13} color="#4A4A4A" /> Tag a location <span style={{ fontWeight: 400, color: '#AAAAAA' }}>(optional — shows on map)</span>
             </div>
             {location && !showMap && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: QL, border: `1.5px solid ${QC}30`, borderRadius: 10, padding: '8px 12px', marginBottom: 8 }}>
-                <span style={{ fontSize: 13, color: QC, flex: 1 }}>📍 {location.name}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: QC, flex: 1 }}><PinIcon size={12} color={QC} /> {location.name}</span>
                 <button onClick={() => setLocation(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: '#AAAAAA', padding: 0 }}>✕</button>
               </div>
             )}
@@ -185,7 +186,7 @@ function AskQuestionSheet({ onClose, onSubmit }) {
                   onClick={() => setShowMap(true)}
                   style={{ width: '100%', padding: '10px 14px', background: '#F8F8F8', border: '1.5px dashed #D0D0D0', borderRadius: 12, fontSize: 13, color: '#888', cursor: 'pointer', textAlign: 'left', boxSizing: 'border-box' }}
                 >
-                  {location ? '📍 Change location' : '🗺 Drop a pin on the map'}
+                  {location ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><PinIcon size={13} color="#888" /> Change location</span> : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><MapIcon size={13} color="#888" /> Drop a pin on the map</span>}
                 </button>
               )
             }
@@ -209,21 +210,31 @@ function AskQuestionSheet({ onClose, onSubmit }) {
 
 // ── Question Card ─────────────────────────────────────────────────────────────
 
-function EditQuestionSheet({ q, onClose, onSave }) {
+function EditQuestionSheet({ q, onClose, onSave, onDelete }) {
   const [title, setTitle] = useState(q.title || '')
   const [body, setBody] = useState(q.body || '')
   const [anon, setAnon] = useState(q.isAnonymous || false)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [saveError, setSaveError] = useState(null)
   const canSave = title.trim().length > 2
 
   const handleSave = async () => {
-    if (!canSave || saving) return
+    if (!canSave || saving || deleting) return
     setSaving(true)
+    setSaveError(null)
     try {
       await onSave({ title: title.trim(), body: body.trim(), isAnonymous: anon })
-    } finally {
+    } catch (e) {
+      setSaveError(e.message || 'Could not save. Please try again.')
       setSaving(false)
     }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this post? This cannot be undone.')) return
+    setDeleting(true)
+    try { await onDelete() } catch { setDeleting(false) }
   }
 
   return (
@@ -266,40 +277,65 @@ function EditQuestionSheet({ q, onClose, onSave }) {
             rows={3}
             style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 14, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit', resize: 'none', marginBottom: 16, boxSizing: 'border-box' }}
           />
+          {saveError && (
+            <div style={{ marginBottom: 10, padding: '10px 14px', background: '#FEF2F2', borderRadius: 10, color: '#DC2626', fontSize: 13, fontWeight: 600 }}>
+              {saveError}
+            </div>
+          )}
           <button
             onClick={handleSave}
-            disabled={!canSave || saving}
+            disabled={!canSave || saving || deleting}
             style={{
               width: '100%', padding: 14, border: 'none', borderRadius: 14, fontSize: 15, fontWeight: 700,
-              cursor: canSave && !saving ? 'pointer' : 'default',
-              background: canSave && !saving ? `linear-gradient(135deg, ${QC}, #3377CC)` : 'var(--border)',
-              color: canSave && !saving ? '#fff' : '#AAAAAA',
+              cursor: canSave && !saving && !deleting ? 'pointer' : 'default',
+              background: canSave && !saving && !deleting ? `linear-gradient(135deg, ${QC}, #3377CC)` : 'var(--border)',
+              color: canSave && !saving && !deleting ? '#fff' : '#AAAAAA',
+              marginBottom: 10,
             }}
           >
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
+          {onDelete && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting || saving}
+              style={{
+                width: '100%', padding: 12, border: '1.5px solid #FCA5A5', borderRadius: 14, fontSize: 14, fontWeight: 700,
+                cursor: deleting || saving ? 'default' : 'pointer',
+                background: '#FFF',
+                color: '#DC2626',
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete Post'}
+            </button>
+          )}
         </div>
       </div>
     </div>
   )
 }
 
-function QuestionCard({ q, liked, onLike, expanded, onToggle, answers, answerDraft, onDraftChange, onAnswer, answerAnon, onAnswerAnonChange, onEdit }) {
+function QuestionCard({ q, liked, onLike, expanded, onToggle, answers, answerDraft, onDraftChange, onAnswer, answerAnon, onAnswerAnonChange, onEdit, onUserClick }) {
   return (
     <div className="fade-in" style={{ background: '#fff', borderRadius: 16, boxShadow: 'var(--shadow)', marginBottom: 12, overflow: 'hidden' }}>
       {/* Header */}
       <div style={{ padding: '14px 14px 0', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-        {q.isAnonymous
-          ? <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#EFEFEF', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={17} color="#AAAAAA" /></div>
-          : <Avatar name={q.username} size={36} bg="linear-gradient(135deg, #B8D4FF, #5599EE)" />
-        }
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 13 }}>{q.username}</div>
-          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{q.time}</div>
+        <div
+          onClick={() => !q.isAnonymous && q.userId && onUserClick?.(q.userId)}
+          style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: !q.isAnonymous && q.userId ? 'pointer' : 'default', flex: 1, minWidth: 0 }}
+        >
+          {q.isAnonymous
+            ? <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#EFEFEF', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><UserIcon size={17} color="#AAAAAA" /></div>
+            : <Avatar name={q.username} size={36} bg="linear-gradient(135deg, #B8D4FF, #5599EE)" />
+          }
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>{q.username}</div>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{q.time}</div>
+          </div>
         </div>
         {q.location && (
-          <span style={{ fontSize: 10, color: QC, background: QL, padding: '3px 8px', borderRadius: 8, flexShrink: 0, whiteSpace: 'nowrap' }}>
-            📍 {q.location.label || q.location.name}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 10, color: QC, background: QL, padding: '3px 8px', borderRadius: 8, flexShrink: 0, whiteSpace: 'nowrap' }}>
+            <PinIcon size={10} color={QC} /> {q.location.label || q.location.name}
           </span>
         )}
         {onEdit && (
@@ -418,7 +454,7 @@ function QuestionCard({ q, liked, onLike, expanded, onToggle, answers, answerDra
 
 // ── Sub-view: Community Questions ────────────────────────────────────────────
 
-function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, onEditSunlightPost, user = {} }) {
+function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, onEditSunlightPost, onDeleteSunlightPost, user = {}, onUserClick }) {
   const [search, setSearch] = useState('')
   const [showAsk, setShowAsk] = useState(false)
   const [liked, setLiked] = useState(new Set())
@@ -535,6 +571,13 @@ function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, onEditSu
     setEditingQ(null)
   }
 
+  const handleDeleteQ = async () => {
+    if (!editingQ?.dbId) return
+    await api.deleteSunlightPost(editingQ.dbId)
+    if (onDeleteSunlightPost) onDeleteSunlightPost(editingQ.id)
+    setEditingQ(null)
+  }
+
   return (
     <>
       <PageHeader
@@ -592,12 +635,13 @@ function CommunityQView({ onShowFAQ, questionPosts = [], onNewQuestion, onEditSu
             answerAnon={!!answerAnons[q.id]}
             onAnswerAnonChange={v => setAnswerAnons(prev => ({ ...prev, [q.id]: v }))}
             onEdit={!q.isStatic && user?.id && q.userId === user.id ? () => setEditingQ(q) : null}
+            onUserClick={onUserClick}
           />
         ))}
       </div>
 
       {showAsk && createPortal(<AskQuestionSheet onClose={() => setShowAsk(false)} onSubmit={handleAsk} />, document.body)}
-      {editingQ && createPortal(<EditQuestionSheet q={editingQ} onClose={() => setEditingQ(null)} onSave={handleEditSave} />, document.body)}
+      {editingQ && createPortal(<EditQuestionSheet q={editingQ} onClose={() => setEditingQ(null)} onSave={handleEditSave} onDelete={handleDeleteQ} />, document.body)}
     </>
   )
 }
@@ -643,7 +687,7 @@ const pickerIcon = L.divIcon({
     box-shadow:0 3px 14px rgba(255,154,60,0.6);
     display:flex;align-items:center;justify-content:center;
     font-size:16px;
-  ">📍</div>`,
+  "><svg viewBox="0 0 24 24" fill="white" width="16" height="16"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/></svg></div>`,
   className: '',
   iconSize: [32, 32],
   iconAnchor: [16, 16],
@@ -765,6 +809,12 @@ const PRE_ARRIVAL_PROMPTS = [
   { category: 'Journey to Campus', prompt: '📷 Share a photo from your journey to campus — a layover, a first glimpse of a new skyline, the moment you landed. What were you feeling?' },
 ]
 
+// ── This week's pinned pre-arrival prompt ─────────────────────────────────────
+const PINNED_PRE_ARRIVAL_PROMPT = {
+  category: 'Your World in Frame',
+  prompt: '📷 Step outside and photograph the view from your front door or window — wherever you\'re calling home right now. What does your corner of the world look like? Share the photo and pin your home location on the map so we can see where the Shine community is spread across the globe.',
+}
+
 const ON_CAMPUS_PROMPTS = [
   // First Frames
   { category: 'First Frames', prompt: '📷 Share the very first photo you took at Harvard — whatever it captured, wherever you were. What were you feeling in that moment?' },
@@ -803,9 +853,14 @@ const ON_CAMPUS_PROMPTS = [
 ]
 
 function WeeklyPromptBanner({ user, onRespond }) {
-  const prompts = user.isOnCampus ? ON_CAMPUS_PROMPTS : PRE_ARRIVAL_PROMPTS
-  const weekNum = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000))
-  const { category, prompt } = prompts[weekNum % prompts.length]
+  const isPreArrival = !user.isOnCampus
+  let category, prompt
+  if (isPreArrival) {
+    ;({ category, prompt } = PINNED_PRE_ARRIVAL_PROMPT)
+  } else {
+    const weekNum = Math.floor(Date.now() / (7 * 24 * 60 * 60 * 1000))
+    ;({ category, prompt } = ON_CAMPUS_PROMPTS[weekNum % ON_CAMPUS_PROMPTS.length])
+  }
   const modeLabel = user.isOnCampus ? 'On Campus' : 'Pre-Arrival'
   const modeColor = user.isOnCampus ? '#A84B00' : '#555'
   const modeBg   = user.isOnCampus ? '#FFE8C0' : '#EEEEEE'
@@ -820,7 +875,7 @@ function WeeklyPromptBanner({ user, onRespond }) {
       boxShadow: '0 2px 12px rgba(255,180,60,0.13)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 17 }}>✨</span>
+        <ZapIcon size={17} color="#FF9A3C" />
         <span style={{ fontWeight: 800, fontSize: 13, color: '#B86A00', flex: 1 }}>Weekly Prompt</span>
         <span style={{
           fontSize: 10, fontWeight: 700, color: modeColor,
@@ -835,7 +890,7 @@ function WeeklyPromptBanner({ user, onRespond }) {
         {prompt}
       </p>
       <button
-        onClick={onRespond}
+        onClick={() => onRespond(prompt)}
         style={{
           width: '100%', padding: '10px 0', border: 'none', borderRadius: 12,
           background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
@@ -843,7 +898,7 @@ function WeeklyPromptBanner({ user, onRespond }) {
           boxShadow: '0 2px 8px rgba(255,154,60,0.3)',
         }}
       >
-        📷 Share a photo + respond
+        {isPreArrival ? 'Share your view + Pin on map' : 'Share a photo + respond'}
       </button>
     </div>
   )
@@ -854,7 +909,7 @@ function WeeklyPromptBanner({ user, onRespond }) {
 const HUNT_GREEN = '#1B8757'
 const HUNT_LIGHT = '#E8F8F0'
 
-function HuntPostCard({ item, index }) {
+function HuntPostCard({ item, index, onUserClick }) {
   return (
     <div
       className="fade-in"
@@ -870,24 +925,28 @@ function HuntPostCard({ item, index }) {
     >
       {/* Badges row */}
       <div style={{ position: 'absolute', top: 8, left: 8, right: 8, zIndex: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', pointerEvents: 'none' }}>
-        <div style={{ background: HUNT_GREEN, color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 8, letterSpacing: '0.3px' }}>
-          🗺️ HUNT
+        <div style={{ background: HUNT_GREEN, color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 8, letterSpacing: '0.3px', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+          HUNT
         </div>
-        <div style={{ background: 'rgba(124,58,237,0.85)', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 8 }}>
-          👭 Get Matched
+        <div style={{ background: 'rgba(124,58,237,0.85)', color: '#fff', fontSize: 9, fontWeight: 800, padding: '2px 7px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+          <UsersIcon size={8} color="#fff" /> Get Matched
         </div>
       </div>
 
       {item.img || item.photoUrl ? (
         <img src={item.img || item.photoUrl} alt="" style={{ width: '100%', height: 150, objectFit: 'cover', display: 'block', background: HUNT_LIGHT }} />
       ) : (
-        <div style={{ width: '100%', height: 100, background: HUNT_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>
-          🗺️
+        <div style={{ width: '100%', height: 100, background: HUNT_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <MapIcon size={28} color="#1B8757" />
         </div>
       )}
 
       <div style={{ padding: '9px 10px 10px' }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#4A4A4A', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div
+          onClick={() => item.userId && onUserClick?.(item.userId)}
+          style={{ fontSize: 11, fontWeight: 700, color: '#4A4A4A', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4, cursor: item.userId ? 'pointer' : 'default' }}
+        >
           <span style={{ width: 18, height: 18, borderRadius: '50%', background: 'linear-gradient(135deg,#2ECC87,#1B8757)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 9, fontWeight: 900, flexShrink: 0 }}>
             {(item.username || 'U')[0].toUpperCase()}
           </span>
@@ -913,11 +972,12 @@ function HuntPostCard({ item, index }) {
 
 // ── Sub-view: Community Feed ──────────────────────────────────────────────────
 
-function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
+function FeedView({ userPosts = [], onNewPost, onEditPost, onDeletePost, user = {}, onUserClick }) {
   const [liked, setLiked] = useState(new Set())
   const [localLikes, setLocalLikes] = useState({})
   const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
+  const [promptPrefill, setPromptPrefill] = useState('')
   const [editingPost, setEditingPost] = useState(null)
   const [feedFilter, setFeedFilter] = useState('community') // 'community' | 'hunt'
 
@@ -959,8 +1019,9 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
       {showCreate && (
         <CreatePostSheet
           user={user}
-          onClose={() => setShowCreate(false)}
-          onSubmit={(post) => { onNewPost && onNewPost(post); setShowCreate(false) }}
+          prefillCaption={promptPrefill}
+          onClose={() => { setShowCreate(false); setPromptPrefill('') }}
+          onSubmit={(post) => { onNewPost && onNewPost(post); setShowCreate(false); setPromptPrefill('') }}
         />
       )}
 
@@ -971,6 +1032,12 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
           editPost={editingPost}
           onClose={() => setEditingPost(null)}
           onSubmit={(updated) => { onEditPost && onEditPost(updated); setEditingPost(null) }}
+          onDelete={async () => {
+            if (!editingPost?.id) return
+            await api.deleteFeedPost(editingPost.id)
+            if (onDeletePost) onDeletePost(editingPost.id)
+            setEditingPost(null)
+          }}
         />
       )}
 
@@ -980,8 +1047,8 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
         background: '#fff', borderBottom: '1px solid var(--border)',
       }}>
         {[
-          { id: 'community', label: '💬 Community Feed' },
-          { id: 'hunt',      label: '🗺️ Scavenger Hunt' },
+          { id: 'community', label: 'Community Feed' },
+          { id: 'hunt',      label: 'Scavenger Hunt' },
         ].map(f => (
           <button
             key={f.id}
@@ -1004,7 +1071,7 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
       {feedFilter === 'community' && (
         <>
           {/* Weekly Prompt */}
-          <WeeklyPromptBanner user={user} onRespond={() => setShowCreate(true)} />
+          <WeeklyPromptBanner user={user} onRespond={(promptText) => { setPromptPrefill(promptText || ''); setShowCreate(true) }} />
 
           {/* Search bar */}
           <SearchBar value={search} onChange={setSearch} placeholder="Search posts…" />
@@ -1017,10 +1084,10 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, padding: '12px 10px 100px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {left.map((p, i)  => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07} extraLikes={localLikes[p.id] ?? 0} onEdit={userPostIds.has(p.id) ? () => setEditingPost(p) : null} />)}
+              {left.map((p, i)  => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07} extraLikes={localLikes[p.id] ?? 0} onEdit={userPostIds.has(p.id) ? () => setEditingPost(p) : null} onUserClick={onUserClick} />)}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 28 }}>
-              {right.map((p, i) => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07 + 0.04} extraLikes={localLikes[p.id] ?? 0} onEdit={userPostIds.has(p.id) ? () => setEditingPost(p) : null} />)}
+              {right.map((p, i) => <PostCard key={p.id} post={p} liked={liked.has(p.id)} onLike={toggleLike} delay={i * 0.07 + 0.04} extraLikes={localLikes[p.id] ?? 0} onEdit={userPostIds.has(p.id) ? () => setEditingPost(p) : null} onUserClick={onUserClick} />)}
             </div>
           </div>
         </>
@@ -1030,7 +1097,7 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
         <div style={{ padding: '12px 10px 100px' }}>
           {huntItems.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 24px', color: '#AAAAAA' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🗺️</div>
+              <div style={{ marginBottom: 12 }}><MapIcon size={40} color="#9CA3AF" /></div>
               <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6, color: '#4A4A4A' }}>No hunt photos yet</div>
               <div style={{ fontSize: 13, lineHeight: 1.6 }}>
                 Complete scavenger hunt missions and choose "Share to feed" to see photos here.
@@ -1039,10 +1106,10 @@ function FeedView({ userPosts = [], onNewPost, onEditPost, user = {} }) {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {huntLeft.map((item, i)  => <HuntPostCard key={i} item={item} index={i} />)}
+                {huntLeft.map((item, i)  => <HuntPostCard key={i} item={item} index={i} onUserClick={onUserClick} />)}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 28 }}>
-                {huntRight.map((item, i) => <HuntPostCard key={i} item={item} index={i} />)}
+                {huntRight.map((item, i) => <HuntPostCard key={i} item={item} index={i} onUserClick={onUserClick} />)}
               </div>
             </div>
           )}
@@ -1098,7 +1165,7 @@ function SearchBar({ value, onChange, placeholder = 'Search…' }) {
   )
 }
 
-function PostCard({ post, liked, onLike, delay, extraLikes = 0, onEdit }) {
+function PostCard({ post, liked, onLike, delay, extraLikes = 0, onEdit, onUserClick }) {
   const displayLikes = (post.likes ?? 0) + extraLikes
   return (
     <div className="fade-in" style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 2px 10px rgba(0,0,0,0.07)', animationDelay: `${delay}s`, position: 'relative' }}>
@@ -1125,14 +1192,19 @@ function PostCard({ post, liked, onLike, delay, extraLikes = 0, onEdit }) {
         )}
         <p style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--text)', marginBottom: 8 }}>{post.text}</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <Avatar name={post.username} size={20} bg={post.avatarBg} />
-          <span style={{ fontSize: 11, color: 'var(--text-secondary)', flex: 1, fontWeight: 500 }}>{post.username}</span>
+          <div
+            onClick={() => !post.isAnonymous && post.userId && onUserClick?.(post.userId)}
+            style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, cursor: !post.isAnonymous && post.userId ? 'pointer' : 'default' }}
+          >
+            <Avatar name={post.username} size={20} bg={post.avatarBg} />
+            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 500 }}>{post.username}</span>
+          </div>
           {onEdit && (
             <button
               onClick={onEdit}
-              style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', marginRight: 2, fontSize: 13 }}
+              style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 4px', marginRight: 2 }}
               title="Edit post"
-            >✏️</button>
+            ><EditIcon size={13} color="#6B7280" /></button>
           )}
           <button onClick={() => onLike(post.id)} style={{ display: 'flex', alignItems: 'center', gap: 3, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
             <HeartIcon size={14} color={liked ? '#E8415A' : '#BBBBBB'} filled={liked} />
@@ -1153,21 +1225,23 @@ const TEXT_CARD_GRADIENTS = [
   'linear-gradient(135deg, #84fab0, #8fd3f4)',
 ]
 
-function CreatePostSheet({ user, onClose, onSubmit, editPost = null }) {
+function CreatePostSheet({ user, onClose, onSubmit, onDelete, editPost = null, prefillCaption = '' }) {
   const isEditing = editPost !== null
   const [mode, setMode] = useState(editPost?.mediaType ?? 'photo')
   const [photoPreview, setPhotoPreview] = useState(editPost?.img ?? null)
   const [textContent, setTextContent] = useState(editPost?.textContent ?? '')
   const [gradientIdx, setGradientIdx] = useState(editPost?.gradientIdx ?? 0)
-  const [caption, setCaption] = useState(editPost?.text ?? '')
+  const [caption, setCaption] = useState(editPost?.text ?? prefillCaption)
   const [pinData, setPinData] = useState(editPost?.location ?? null)
   const [showInlineMap, setShowInlineMap] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [saveError, setSaveError] = useState(null)
   const fileRef = useRef(null)
 
-  const canSubmit = mode === 'photo'
+  const canSubmit = (mode === 'photo'
     ? photoPreview && caption.trim()
-    : textContent.trim() && caption.trim()
+    : textContent.trim() && caption.trim()) && !submitting && !deleting
 
   const handleFile = (e) => {
     const file = e.target.files?.[0]
@@ -1177,10 +1251,11 @@ function CreatePostSheet({ user, onClose, onSubmit, editPost = null }) {
     reader.readAsDataURL(file)
   }
 
-  const handleSubmit = () => {
-    if (!canSubmit || submitting) return
+  const handleSubmit = async () => {
+    if (!canSubmit) return
     setSubmitting(true)
-    const post = {
+    setSaveError(null)
+    const localPost = {
       ...(isEditing ? editPost : {}),
       id: isEditing ? editPost.id : Date.now(),
       username: editPost?.username ?? user.name ?? 'You',
@@ -1195,7 +1270,32 @@ function CreatePostSheet({ user, onClose, onSubmit, editPost = null }) {
       gradientIdx,
       location: pinData,
     }
-    onSubmit(post)
+    try {
+      if (isEditing && editPost?.id) {
+        const saved = await api.updateFeedPost(editPost.id, {
+          text: caption.trim(),
+          img: mode === 'photo' ? photoPreview : null,
+          mediaType: mode,
+          textContent: mode === 'textcard' ? textContent.trim() : null,
+          gradientIdx,
+          locationName: pinData?.name ?? null,
+          locationLat: pinData?.lat ?? null,
+          locationLng: pinData?.lng ?? null,
+        })
+        onSubmit(saved ?? localPost)
+      } else {
+        onSubmit(localPost)
+      }
+    } catch (e) {
+      setSaveError(e.message || 'Could not save. Please try again.')
+      setSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this post? This cannot be undone.')) return
+    setDeleting(true)
+    try { await onDelete?.() } catch { setDeleting(false) }
   }
 
   return (
@@ -1216,13 +1316,16 @@ function CreatePostSheet({ user, onClose, onSubmit, editPost = null }) {
             <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px 14px' }}>
-            <span style={{ fontSize: 17, fontWeight: 800 }}>{isEditing ? '✏️ Edit Post' : 'Create Post'}</span>
+            <span style={{ fontSize: 17, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              {isEditing && <EditIcon size={15} color="#1A1A1A" />}
+              {isEditing ? 'Edit Post' : 'Create Post'}
+            </span>
             <button onClick={onClose} style={iconBtn}><CloseIcon size={20} color="#4A4A4A" /></button>
           </div>
 
           {/* Mode toggle */}
           <div style={{ display: 'flex', margin: '0 20px 16px', background: 'var(--bg)', borderRadius: 12, padding: 4 }}>
-            {[['photo', '📷  Photo'], ['textcard', '✍️  Text Card']].map(([m, label]) => (
+            {[['photo', 'Photo'], ['textcard', 'Text Card']].map(([m, label]) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
@@ -1353,7 +1456,7 @@ function CreatePostSheet({ user, onClose, onSubmit, editPost = null }) {
                   boxSizing: 'border-box', color: pinData ? '#7A4600' : '#AAAAAA',
                 }}
               >
-                <span style={{ fontSize: 16, flexShrink: 0 }}>{pinData ? '📍' : '🗺️'}</span>
+                <span style={{ flexShrink: 0 }}>{pinData ? <PinIcon size={16} color="#7A4600" /> : <MapIcon size={16} color="#AAAAAA" />}</span>
                 <span style={{ flex: 1, fontWeight: pinData ? 600 : 400 }}>
                   {pinData ? pinData.name : 'Tap to place a pin on the map…'}
                 </span>
@@ -1365,10 +1468,17 @@ function CreatePostSheet({ user, onClose, onSubmit, editPost = null }) {
             )}
           </div>
 
+          {/* Error */}
+          {saveError && (
+            <div style={{ marginBottom: 10, padding: '10px 14px', background: '#FEF2F2', borderRadius: 10, color: '#DC2626', fontSize: 13, fontWeight: 600 }}>
+              {saveError}
+            </div>
+          )}
+
           {/* Submit */}
           <button
             onClick={handleSubmit}
-            disabled={!canSubmit || submitting}
+            disabled={!canSubmit}
             style={{
               width: '100%', padding: 15, border: 'none', borderRadius: 16,
               background: canSubmit ? 'linear-gradient(135deg, #FFC94A, #FF9A3C)' : '#F0F0F0',
@@ -1376,10 +1486,27 @@ function CreatePostSheet({ user, onClose, onSubmit, editPost = null }) {
               fontSize: 15, fontWeight: 800, cursor: canSubmit ? 'pointer' : 'default',
               boxShadow: canSubmit ? '0 4px 16px rgba(255,154,60,0.4)' : 'none',
               transition: 'all 0.2s',
+              marginBottom: isEditing && onDelete ? 10 : 0,
             }}
           >
             {submitting ? (isEditing ? 'Saving…' : 'Posting…') : (isEditing ? 'Save changes' : 'Share Post')}
           </button>
+
+          {/* Delete (editing only) */}
+          {isEditing && onDelete && (
+            <button
+              onClick={handleDelete}
+              disabled={deleting || submitting}
+              style={{
+                width: '100%', padding: 12, border: '1.5px solid #FCA5A5', borderRadius: 16,
+                background: '#fff', color: '#DC2626',
+                fontSize: 14, fontWeight: 700,
+                cursor: deleting || submitting ? 'default' : 'pointer',
+              }}
+            >
+              {deleting ? 'Deleting…' : 'Delete Post'}
+            </button>
+          )}
         </div>
         </div>
       </div>
