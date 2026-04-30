@@ -178,6 +178,7 @@ function CompletionSheet({ mission, onClose, onComplete }) {
         taggedUserIds: taggedFriends.map(f => f.id),
       })
       onComplete({ mission, pts, photoUrl, shareToFeed, isMatchGroup })
+      setSubmitting(false)
       setResult({ pts, shareToFeed, isMatchGroup, taggedUsers: apiResult?.taggedUsers ?? [], aiVerified: apiResult?.aiVerified, aiNote: apiResult?.aiNote ?? '' })
     } catch (e) {
       const reason = e.message || 'Submission failed. Please try again.'
