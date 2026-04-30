@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { CONTENT_ITEMS, TYPE_CONFIG, FILTERS } from '../data'
-import { SearchIcon, HeartIcon, MessageIcon, CloseIcon, ListIcon, MapIcon, SunIcon } from './Icons'
+import { SearchIcon, HeartIcon, MessageIcon, CloseIcon, ListIcon, MapIcon, SunIcon, PinIcon } from './Icons'
 import CreateContent from './CreateContent'
 
 // Fix leaflet default icon URLs
@@ -73,7 +73,7 @@ function createHuntPinIcon(selected = false) {
   const s = selected ? 46 : 38
   return L.divIcon({
     html: `<div style="display:flex;flex-direction:column;align-items:center;">
-      <div style="width:${s}px;height:${s}px;border-radius:12px;background:linear-gradient(135deg,#2ECC87,#1B8757);border:3px solid #fff;box-shadow:0 3px 14px rgba(27,135,87,${selected ? '0.7' : '0.4'});display:flex;align-items:center;justify-content:center;font-size:${selected ? 22 : 18}px;transform:${selected ? 'scale(1.1)' : 'scale(1)'};transition:all 0.2s;">🗺️</div>
+      <div style="width:${s}px;height:${s}px;border-radius:12px;background:linear-gradient(135deg,#2ECC87,#1B8757);border:3px solid #fff;box-shadow:0 3px 14px rgba(27,135,87,${selected ? '0.7' : '0.4'});display:flex;align-items:center;justify-content:center;transform:${selected ? 'scale(1.1)' : 'scale(1)'};transition:all 0.2s;"><svg xmlns="http://www.w3.org/2000/svg" width="${selected ? 22 : 18}" height="${selected ? 22 : 18}" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></div>
       <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #1B8757;margin-top:-1px;"></div>
     </div>`,
     className: '',
@@ -103,7 +103,7 @@ function useBlockMapEvents(ref) {
   }, [ref])
 }
 
-export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts: sunlightPostsProp = [], onEditSunlightPost }) {
+export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts: sunlightPostsProp = [], onEditSunlightPost, onUserClick }) {
   const sunlightPosts = Array.isArray(sunlightPostsProp) ? sunlightPostsProp : []
   const [filter, setFilter] = useState('all')
   const [selected, setSelected] = useState(null)
@@ -112,6 +112,12 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
   const [listView, setListView] = useState(false)
   const [search, setSearch] = useState('')
   const [editingPost, setEditingPost] = useState(null)
+  const [showWelcome, setShowWelcome] = useState(() => !localStorage.getItem('shine_map_welcome_seen'))
+
+  const dismissWelcome = () => {
+    localStorage.setItem('shine_map_welcome_seen', '1')
+    setShowWelcome(false)
+  }
 
   const allLocatedPosts = communityPosts.filter(p => p.location)
   const storyPosts = allLocatedPosts.filter(p => !p.isHunt).filter(p => {
@@ -345,17 +351,18 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
           isSunlightPost={sunlightPostIds.has(selected.id)}
           onEdit={() => { setEditingPost(selected); setSelected(null) }}
           onClose={() => setSelected(null)}
+          onUserClick={onUserClick}
         />
       )}
 
       {/* ── Story (community post) bottom sheet ── */}
       {selectedStory && !listView && (
-        <StoryBottomSheet post={selectedStory} onClose={() => setSelectedStory(null)} />
+        <StoryBottomSheet post={selectedStory} onClose={() => setSelectedStory(null)} onUserClick={onUserClick} />
       )}
 
       {/* ── Hunt post bottom sheet ── */}
       {selectedHuntPost && !listView && (
-        <HuntPostBottomSheet post={selectedHuntPost} onClose={() => setSelectedHuntPost(null)} />
+        <HuntPostBottomSheet post={selectedHuntPost} onClose={() => setSelectedHuntPost(null)} onUserClick={onUserClick} />
       )}
 
       {/* ── List view panel ── */}
@@ -375,12 +382,93 @@ export default function MapHome({ onSunlight, communityPosts = [], sunlightPosts
           onSubmit={(updated) => { onEditSunlightPost?.(updated); setEditingPost(null) }}
         />
       )}
+
+      {/* ── First-visit welcome popup ── */}
+      {showWelcome && (
+        <div style={{
+          position: 'absolute', inset: 0, zIndex: 2000,
+          background: 'rgba(0,0,0,0.38)',
+          display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+        }}>
+          <div className="slide-up" style={{
+            background: '#fff',
+            borderRadius: '24px 24px 0 0',
+            padding: '0 20px 36px',
+            boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+          }}>
+            {/* Drag handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+              <div style={{ width: 36, height: 4, background: '#E0E0E0', borderRadius: 2 }} />
+            </div>
+
+            {/* Header row */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16, marginTop: 6 }}>
+              <div style={{
+                width: 48, height: 48, borderRadius: 14, flexShrink: 0,
+                background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+              </div>
+              <button
+                onClick={dismissWelcome}
+                style={{
+                  background: '#F0F0F0', border: 'none', cursor: 'pointer',
+                  width: 32, height: 32, borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ fontSize: 20, fontWeight: 800, color: '#1A1A1A', marginBottom: 10, lineHeight: 1.3 }}>
+              You're looking at Cambridge, MA
+            </div>
+            <div style={{ fontSize: 15, color: '#5A5A5A', lineHeight: 1.65, marginBottom: 22 }}>
+              This is Harvard's home — but your story starts somewhere else too.{'\u00a0'}
+              <strong style={{ color: '#FF9A3C' }}>Zoom out and pin your hometown</strong> on the map with a photo or story so fellow international students can see where everyone comes from.
+            </div>
+
+            {/* CTA button */}
+            <button
+              onClick={() => { dismissWelcome(); onSunlight?.() }}
+              style={{
+                width: '100%', padding: '15px 0',
+                background: 'linear-gradient(135deg, #FFC94A, #FF9A3C)',
+                border: 'none', borderRadius: 16, cursor: 'pointer',
+                fontSize: 16, fontWeight: 800, color: '#fff',
+                letterSpacing: '0.2px', marginBottom: 12,
+              }}
+            >
+              Pin my hometown
+            </button>
+
+            {/* Dismiss link */}
+            <button
+              onClick={dismissWelcome}
+              style={{
+                width: '100%', padding: '8px 0',
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 14, fontWeight: 600, color: '#AAAAAA',
+              }}
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 // ── Pin detail bottom sheet ──────────────────────────────────────────────────
-function PinBottomSheet({ item, onClose, isSunlightPost, onEdit }) {
+function PinBottomSheet({ item, onClose, isSunlightPost, onEdit, onUserClick }) {
   const cfg = TYPE_CONFIG[item.type] ?? TYPE_CONFIG.story
   return (
     <div className="slide-up" style={{
@@ -412,7 +500,10 @@ function PinBottomSheet({ item, onClose, isSunlightPost, onEdit }) {
                 fontSize: 12, fontWeight: 700, color: cfg.color,
               }}
             >
-              ✏️ Edit
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit
+              </span>
             </button>
           )}
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
@@ -438,7 +529,10 @@ function PinBottomSheet({ item, onClose, isSunlightPost, onEdit }) {
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F0F0F0', paddingTop: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div
+          onClick={() => item.userId && onUserClick?.(item.userId)}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: item.userId ? 'pointer' : 'default' }}
+        >
           <div style={{
             width: 32, height: 32, borderRadius: '50%', background: item.avatarBg, flexShrink: 0,
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800,
@@ -543,7 +637,7 @@ function ListPanel({ items, onSelect, onClose }) {
 }
 
 // ── Story (community post) bottom sheet ──────────────────────────────────────
-function StoryBottomSheet({ post, onClose }) {
+function StoryBottomSheet({ post, onClose, onUserClick }) {
   const [liked, setLiked] = useState(false)
   const [localLikes, setLocalLikes] = useState(0)
   const toggleLike = () => {
@@ -571,7 +665,7 @@ function StoryBottomSheet({ post, onClose }) {
             background: '#FFF3E0', color: '#FF9A3C',
           }}>STORY</span>
           {post.location && (
-            <span style={{ fontSize: 12, color: '#9A9A9A', fontWeight: 500 }}>📍 {post.location.name}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 12, color: '#9A9A9A', fontWeight: 500 }}><PinIcon size={11} color="#9A9A9A" /> {post.location.name}</span>
           )}
         </div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
@@ -601,7 +695,10 @@ function StoryBottomSheet({ post, onClose }) {
       <div style={{ padding: '14px 16px 28px' }}>
         <p style={{ fontSize: 14, color: '#2A2A2A', lineHeight: 1.65, marginBottom: 14 }}>{post.text}</p>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F0F0F0', paddingTop: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
+            onClick={() => post.userId && onUserClick?.(post.userId)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: post.userId ? 'pointer' : 'default' }}
+          >
             <div style={{
               width: 32, height: 32, borderRadius: '50%', background: post.avatarBg ?? '#FFC94A',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800,
@@ -623,7 +720,7 @@ function StoryBottomSheet({ post, onClose }) {
   )
 }
 
-function HuntPostBottomSheet({ post, onClose }) {
+function HuntPostBottomSheet({ post, onClose, onUserClick }) {
   const [liked, setLiked] = useState(false)
   const [localLikes, setLocalLikes] = useState(0)
   const toggleLike = () => { setLiked(v => !v); setLocalLikes(n => n + (liked ? -1 : 1)) }
@@ -642,8 +739,14 @@ function HuntPostBottomSheet({ post, onClose }) {
       {/* Header badges */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', padding: '4px 10px', borderRadius: 20, background: '#E8F8F0', color: '#1B8757' }}>🗺️ HUNT</span>
-          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', padding: '4px 10px', borderRadius: 20, background: '#EDE9FE', color: '#7C3AED' }}>👭 Get Matched</span>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', padding: '4px 10px', borderRadius: 20, background: '#E8F8F0', color: '#1B8757', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#1B8757" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            HUNT
+          </span>
+          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.5px', padding: '4px 10px', borderRadius: 20, background: '#EDE9FE', color: '#7C3AED', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#7C3AED" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Get Matched
+          </span>
         </div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
           <CloseIcon size={18} color="#9A9A9A" />
@@ -658,7 +761,7 @@ function HuntPostBottomSheet({ post, onClose }) {
       {/* Location tag */}
       {post.location?.name && (
         <div style={{ margin: '12px 16px 0', padding: '10px 14px', borderRadius: 12, background: '#F0FDF4', border: '1.5px solid #BBF7D0', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 20 }}>📍</span>
+          <PinIcon size={20} color="#1B8757" />
           <div>
             <div style={{ fontSize: 12, fontWeight: 800, color: '#1B8757' }}>{post.location.name}</div>
             <div style={{ fontSize: 10, color: '#6B7280', marginTop: 1 }}>{post.location.lat?.toFixed(4)}, {post.location.lng?.toFixed(4)}</div>
@@ -670,7 +773,10 @@ function HuntPostBottomSheet({ post, onClose }) {
       <div style={{ padding: '14px 16px 28px' }}>
         {post.text && <p style={{ fontSize: 14, color: '#2A2A2A', lineHeight: 1.65, marginBottom: 14 }}>{post.text}</p>}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F0F0F0', paddingTop: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div
+            onClick={() => post.userId && onUserClick?.(post.userId)}
+            style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: post.userId ? 'pointer' : 'default' }}
+          >
             <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg,#2ECC87,#1B8757)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: '#fff' }}>
               {(post.username ?? '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
             </div>
