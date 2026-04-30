@@ -399,13 +399,15 @@ function ProfileEditSheet({ post, onClose, onSave }) {
   const [body, setBody] = useState(post.body || '')
   const [anon, setAnon] = useState(post.isAnonymous || false)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
   const canSave = title.trim().length > 2
 
   const handleSave = async () => {
     if (!canSave || saving) return
     setSaving(true)
+    setSaveError(null)
     try { await onSave({ title: title.trim(), body: body.trim(), isAnonymous: anon }) }
-    finally { setSaving(false) }
+    catch (e) { setSaveError(e.message || 'Could not save. Please try again.'); setSaving(false) }
   }
 
   return (
@@ -448,6 +450,11 @@ function ProfileEditSheet({ post, onClose, onSave }) {
             rows={3}
             style={{ width: '100%', padding: '12px 14px', border: '1.5px solid var(--border)', borderRadius: 12, fontSize: 14, lineHeight: 1.6, outline: 'none', fontFamily: 'inherit', resize: 'none', marginBottom: 16, boxSizing: 'border-box' }}
           />
+          {saveError && (
+            <div style={{ marginBottom: 10, padding: '10px 14px', background: '#FEF2F2', borderRadius: 10, color: '#DC2626', fontSize: 13, fontWeight: 600 }}>
+              {saveError}
+            </div>
+          )}
           <button
             onClick={handleSave}
             disabled={!canSave || saving}
@@ -623,12 +630,8 @@ export default function Profile({ user = {}, onBack, onSignOut, onUpdate, userPo
 
   const handleSaveEdit = async (updates) => {
     if (!editingPost) return
-    try {
-      const updated = await api.updateSunlightPost(editingPost.dbId, updates)
-      onEditSunlightPost?.(updated || { ...editingPost, ...updates })
-    } catch (e) {
-      onEditSunlightPost?.({ ...editingPost, ...updates })
-    }
+    const updated = await api.updateSunlightPost(editingPost.dbId, updates)
+    onEditSunlightPost?.(updated || { ...editingPost, ...updates })
     setEditingPost(null)
   }
 

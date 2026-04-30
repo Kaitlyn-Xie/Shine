@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { CloseIcon, CheckIcon } from './Icons'
+import { CloseIcon, CheckIcon, EditIcon, ZapIcon } from './Icons'
 import { TYPE_CONFIG } from '../data'
+import { api } from '../lib/api'
 
 delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({
@@ -128,13 +129,17 @@ export default function CreateContent({ onClose, onSubmit, editPost = null }) {
   const [body, setBody] = useState(editPost?.body ?? '')
   const [location, setLocation] = useState(editPost?.location ?? null)
   const [showMapPicker, setShowMapPicker] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
 
   const cfg = TYPE_CONFIG[type]
-  const canSubmit = title.trim().length > 0 && body.trim().length > 0
+  const canSubmit = title.trim().length > 0 && body.trim().length > 0 && !saving
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return
-    onSubmit({
+    setSaving(true)
+    setSaveError(null)
+    const localUpdate = {
       ...(isEditing ? editPost : {}),
       id: isEditing ? editPost.id : Date.now(),
       type,
@@ -143,8 +148,23 @@ export default function CreateContent({ onClose, onSubmit, editPost = null }) {
       location: location ?? null,
       likes: isEditing ? editPost.likes : 0,
       time: isEditing ? editPost.time : 'Just now',
-    })
-    onClose()
+    }
+    try {
+      if (isEditing && editPost?.dbId) {
+        const saved = await api.updateSunlightPost(editPost.dbId, {
+          title: title.trim(),
+          body: body.trim(),
+          isAnonymous: editPost.isAnonymous ?? false,
+        })
+        onSubmit(saved ?? localUpdate)
+      } else {
+        onSubmit(localUpdate)
+      }
+      onClose()
+    } catch (e) {
+      setSaveError(e.message || 'Could not save. Please try again.')
+      setSaving(false)
+    }
   }
 
   return (
@@ -169,7 +189,10 @@ export default function CreateContent({ onClose, onSubmit, editPost = null }) {
           borderBottom: '1px solid var(--border)',
           flexShrink: 0,
         }}>
-          <span style={{ fontSize: 18, fontWeight: 800 }}>{isEditing ? '✏️ Edit Sunlight Post' : '✨ New Sunlight Post'}</span>
+          <span style={{ fontSize: 18, fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            {isEditing ? <EditIcon size={16} color="#1A1A1A" /> : <ZapIcon size={16} color="#1A1A1A" />}
+            {isEditing ? 'Edit Sunlight Post' : 'New Sunlight Post'}
+          </span>
           <button onClick={onClose} style={iconBtn}>
             <CloseIcon size={20} color="#4A4A4A" />
           </button>
@@ -307,6 +330,13 @@ export default function CreateContent({ onClose, onSubmit, editPost = null }) {
             )}
           </div>
 
+          {/* Error message */}
+          {saveError && (
+            <div style={{ marginBottom: 10, padding: '10px 14px', background: '#FEF2F2', borderRadius: 10, color: '#DC2626', fontSize: 13, fontWeight: 600 }}>
+              {saveError}
+            </div>
+          )}
+
           {/* Submit */}
           <button
             onClick={handleSubmit}
@@ -322,7 +352,7 @@ export default function CreateContent({ onClose, onSubmit, editPost = null }) {
             }}
           >
             <CheckIcon size={18} color={canSubmit ? '#fff' : '#AAAAAA'} />
-            {isEditing ? 'Save changes' : `Post ${TYPE_CONFIG[type].label}`}
+            {saving ? 'Saving…' : isEditing ? 'Save changes' : `Post ${TYPE_CONFIG[type].label}`}
           </button>
         </div>
       </div>
